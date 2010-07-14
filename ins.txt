@@ -1,0 +1,30 @@
+add	1
+brcs	1/2	branch
+breq	1/2	branch
+brlo	1/2	branch
+brne	1/2	branch
+brsh	1/2	branch
+cbi	2
+cbr	1
+clr	1
+cp	1
+cpi	1
+dec	1
+in	1
+inc	1
+ldi	1
+lsl	1
+lsr	1
+mov	1
+out	1
+reti	4	end
+rjmp	2	jmp
+sbi	2
+sbic	1/2	skip
+sbis	1/2	skip
+sbr	1
+sbrc	1/2	skip
+sbrs	1/2	skip
+sei	1
+ser	1
+sub	1
