@@ -1,10 +1,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#define F_CPU		16000000UL
+#define F_CPU		8000000UL
 #include <util/delay.h>
 #include <stdint.h>
 
-#define ETU		427u
+#define ETU		(F_CPU/37500)
 
 #define MAX_LEN	30
 
@@ -56,7 +56,7 @@ void send_frame(void) {
 	
 	fptr = frame;				// set ptr to startbit
 	flen *=8; 					// bytes -> bits
-	flen += 1; 				// startbit
+	flen += 2; 				// startbit, last bit
 	
 	OCR1A = TCNT1 + (ETU*3); 	// silence before start
 	
@@ -72,19 +72,21 @@ void send_frame(void) {
 int main(void) {
 	uint8_t dimval = 0;
 	
-	PORTB = (1<<PB1);
+	PORTB = 0;
 	DDRB = (1<<PB1);
 	
 	TCCR1B = (1<<CS10);
 	
 	// TODO: wait for powerup
 	
+	sei();
+	
 	while(1) {
 		put_frame(0x01);
 		put_frame(dimval++);
 		send_frame();
 		while(TIMSK) {} // wait while send busy
-		_delay_ms(20);
+		_delay_ms(1);
 	}
 	
 	return 0;
