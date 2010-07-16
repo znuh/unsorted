@@ -7,3 +7,6 @@ all:
 load_master:
 	avrdude -cstk500v2 -P /dev/ttyUSB0 -p m8 -U flash:w:master.hex -U lfuse:w:0x64:m -U hfuse:w:0xd9:m
 
+load_slave:
+	avrdude -cstk500v2 -P /dev/ttyUSB0 -p t13 -U flash:w:main.hex -U eeprom:w:1:m -U lfuse:w:0x79:m -U hfuse:w:0xfb:m
+

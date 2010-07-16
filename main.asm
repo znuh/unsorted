@@ -347,6 +347,8 @@ EEPROM_WAIT:
     ldi temp, (1<<SE)|(1<<ISC00)
     out MCUCR, temp
     
+    ; TODO: dim up on start
+    
 LOOP:
     sleep
     rjmp LOOP
