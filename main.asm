@@ -264,18 +264,15 @@ ADDR_RCVD:
     sbrc flags, FL_TSTDISABLE
     rjmp INT_0_RET
     
+    ; if testmode already enabled
+    ; don't reenable the LED
+    sbrc flags, FL_TSTMODE
+    rjmp INT_0_RET
+    
     ; enable test mode
     sbr flags, (1<<FL_TSTMODE)
     
-    ; disable PWM
-    clr temp
-    out TCCR0A, temp
-
-    ; on, force dim=1
-    ldi temp, (0<<PB2)|(1<<PB0)
-    out PORTB, temp
-    
-    rjmp INT_0_RET
+    rjmp DIM_FULL
     
 RX_ERROR:
 
