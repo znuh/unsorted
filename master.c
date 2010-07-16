@@ -70,7 +70,7 @@ void send_frame(void) {
 */
 
 int main(void) {
-	uint8_t dimval = 0;
+	uint16_t dimval = 0;
 	
 	PORTB = 0;
 	DDRB = (1<<PB1);
@@ -83,10 +83,13 @@ int main(void) {
 	
 	while(1) {
 		put_frame(0x01);
-		put_frame(dimval++);
+		put_frame(dimval>>8);
+		dimval+= (dimval>>11) + 1;
+		//dimval+=0x100;
 		send_frame();
 		while(TIMSK) {} // wait while send busy
-		_delay_ms(1);
+		//_delay_us(127 - (dimval>>9));
+		//_delay_ms(1000);
 	}
 	
 	return 0;
