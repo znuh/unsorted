@@ -51,17 +51,22 @@
 
 T0_OVF:
     cpi ovf, $ff
-    brne T0_OVF_INC
+    breq T0_OVF_OUT
     
-    ; disable test mode switch
-    sbr flags, (1<<FL_TSTDISABLE)
-    
-    reti
-    
-T0_OVF_INC:
     inc ovf
     
+T0_OVF_OUT:
     reti
+
+TEST_ENABLE:
+    sbr flags, (1<<FL_TSTMODE)
+    ; TODO: enable LED
+    rjmp RX_RESET
+    
+TEST_DISABLE:
+    cbr flags, (1<<FL_TSTMODE)
+    ; TODO: back to PWM mode
+    rjmp RX_RESET
 
 DIM_OFF:
     ; disable PWM
@@ -88,13 +93,13 @@ DIM_FULL:
 LONG_DELTA:
 
     sbis PINB, PB1
-    rjmp RX_ERROR	; long hi state
+    rjmp RX_ERROR	; ERROR: too long hi
 
-    cpi rxcnt, 3	; pkt too short
-    brlo PKT_ERROR
+    cpi rxcnt, 3
+    brlo PKT_ERROR	; ERROR: pkt too short
 
-    cpi cksum, 0	; cksum invalid
-    brne PKT_ERROR
+    cpi cksum, 0
+    brne PKT_ERROR	; ERROR: cksum invalid
 
     sbrs flags, FL_DIMVAL	; no new dimval for my addr
     rjmp PKT_START
@@ -124,8 +129,9 @@ LONG_DELTA:
     
 PKT_ERROR:
 
-    sbrc flags, FL_TSTMODE	; in test mode: disable LED on rx error
-    sbi PORTB, PB2
+    ; TODO
+    ;sbrc flags, FL_TSTMODE	; in test mode: disable LED on rx error
+    ;sbi PORTB, PB2
     
 PKT_START:
     ; beginning of a new packet
@@ -143,6 +149,14 @@ INT_0:
     ; ovf < 1 - no overflow
     cpi ovf, 1
     brlo NO_OVF
+    
+    ; test mode enable
+    cpi ovf, 200
+    brsh TEST_ENABLE
+    
+    ; test mode disable
+    cpi ovf, 100
+    brsh TEST_DISABLE
     
     ; ovf > 1 - too long
     cpi ovf, 2
@@ -174,7 +188,7 @@ DELTA_DONE:
 
     ; still waiting for silence before startbit
     cpi state, 0
-    breq RX_ERROR
+    breq RX_ERROR	; ERROR: silence before start too short
 
     ; receiving databit?
     cpi state, 2
@@ -182,7 +196,7 @@ DELTA_DONE:
     
     ; state = 1 -> receiving startbit
     cpi temp, 21
-    brlo RX_ERROR
+    brlo RX_ERROR	; ERROR: startbit too short
     
     ; calc etu
     ; sym0 lower bound = 1u - 0.25u
@@ -208,11 +222,11 @@ DATABIT:
 
     ; < lower -> error
     cp temp, sym0_lo
-    brlo RX_ERROR
+    brlo RX_ERROR		; ERROR: databit too short
     
     ; > upper -> error
     cp temp, sym1_hi
-    brsh RX_ERROR
+    brsh RX_ERROR		; ERROR: databit too long
     
     lsl rxbyte
     
@@ -259,28 +273,18 @@ CKSUM_RCVD:
 
 ADDR_RCVD:
     mov rxaddr, rxbyte
-    
-    ; enable test mode?
-    sbrc flags, FL_TSTDISABLE
     rjmp INT_0_RET
-    
-    ; if testmode already enabled
-    ; don't reenable the LED
-    sbrc flags, FL_TSTMODE
-    rjmp INT_0_RET
-    
-    ; enable test mode
-    sbr flags, (1<<FL_TSTMODE)
-    
-    rjmp DIM_FULL
     
 RX_ERROR:
+
+RX_RESET:
 
     clr state
     cbr flags, (1<<FL_DIMVAL)
     
-    sbrc flags, FL_TSTMODE	; in test mode: disable LED on rx error
-    sbi PORTB, PB2
+    ; TODO
+;    sbrc flags, FL_TSTMODE	; in test mode: disable LED on rx error
+;    sbi PORTB, PB2
     
 INT_0_RET:
     mov t0last, t0cnt
