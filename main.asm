@@ -6,7 +6,7 @@
 .def	rxaddr	= r3
 .def	rxbyte	= r4
 .def	t0last	= r5
-.def	t0cnt	= r6
+
 .def	sym0_lo	= r7
 .def	sym1_lo	= r8
 .def	sym1_hi	= r9
@@ -19,6 +19,7 @@
 .def	rxcnt	= r21
 .def 	cksum	= r22
 .def	flags	= r23
+.def	t0cnt	= r24
 
 ; X: 26/27
 ; Y: 28/29
@@ -98,6 +99,35 @@ TEST_DISABLE:
     ; (back to PWM mode)
     rjmp RX_RESET
 
+    
+PKT_ERROR_1:	; packet too short
+
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse off
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+PKT_ERROR_2:	; checksum invalid
+
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse off
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+PKT_START:
+    ; beginning of a new packet
+    ldi state, 1
+    clr rxcnt
+    cbr flags, (1<<FL_DIMVAL)
+    
+    rjmp INT_0_RET
+
 LONG_DELTA:
 
     sbic PINB, PB1
@@ -146,50 +176,39 @@ LONG_LOW:
     cbi PORTB, PB2
     
     rjmp PKT_START
-    
-PKT_ERROR_1:	; packet too short
 
-    sbrs flags, FL_TSTMODE
-    rjmp PKT_START
-    
-    ; pulse off
-    sbi PORTB, PB2
-    nop
-    cbi PORTB, PB2
-
-PKT_ERROR_2:	; checksum invalid
-
-    sbrs flags, FL_TSTMODE
-    rjmp PKT_START
-    
-    ; pulse off
-    sbi PORTB, PB2
-    nop
-    cbi PORTB, PB2
-
-PKT_START:
-    ; beginning of a new packet
-    ldi state, 1
-    clr rxcnt
-    cbr flags, (1<<FL_DIMVAL)
-    
-    rjmp INT_0_RET
 
 INT_0:
     in t0cnt, TCNT0
     
+    ; unhandled overflow?
+    cpi t0cnt, 0
+    brne NO_OVF_INC
+    
+    ; 2nd check
+    in temp2, TIFR0
+    sbrs temp2, TOV0
+    rjmp NO_OVF_INC
+    
+    inc ovf
+    
+    ldi temp2, (1<<TOV0)
+    out TIFR0, temp2
+    
+NO_OVF_INC:
+    
     ; calc delta
-    
-    ; ovf < 1 - no overflow
-    cpi ovf, 1
-    brlo NO_OVF
-    
     
     ; ovf > 1 - too long
     cpi ovf, 2
     brsh LONG_DELTA
     
-    ; 1 overflow
+    cpi ovf, 1
+    brne NO_OVF
+    
+OVF_OCCURED:
+    
+    ; >=1 overflow
     ; dt = $ff - t0last + t0cnt + 1
     ser temp
     sub temp, t0last
