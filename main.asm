@@ -189,7 +189,8 @@ INT_0:
     ser temp
     sub temp, t0last
     add temp, t0cnt
-    brcs LONG_DELTA
+    ; PROBLEM:
+    ;brcs LONG_DELTA
     inc temp
     cpi temp, 0
     breq LONG_DELTA
