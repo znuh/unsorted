@@ -210,14 +210,15 @@ OVF_OCCURED:
     
     ; >=1 overflow
     ; dt = $ff - t0last + t0cnt + 1
-    ser temp
+    clr temp
+    ;ser temp
     sub temp, t0last
     add temp, t0cnt
     ; PROBLEM:
     ;brcs LONG_DELTA
-    inc temp
-    cpi temp, 0
-    breq LONG_DELTA
+    ;inc temp
+    ;cpi temp, 0
+    ;breq LONG_DELTA
     
     rjmp DELTA_DONE
     
@@ -332,7 +333,7 @@ ADDR_RCVD:
         
 RX_ERROR_3:	; silence before start too short
     sbrs flags, FL_TSTMODE
-    rjmp PKT_START
+    rjmp RX_RESET
     
     ; pulse
     sbi PORTB, PB2
@@ -341,7 +342,7 @@ RX_ERROR_3:	; silence before start too short
 
 RX_ERROR_4:	; startbit too short
     sbrs flags, FL_TSTMODE
-    rjmp PKT_START
+    rjmp RX_RESET
     
     ; pulse
     sbi PORTB, PB2
@@ -350,7 +351,7 @@ RX_ERROR_4:	; startbit too short
 
 RX_ERROR_5:	; databit too short
     sbrs flags, FL_TSTMODE
-    rjmp PKT_START
+    rjmp RX_RESET
     
     ; pulse
     sbi PORTB, PB2
@@ -359,7 +360,7 @@ RX_ERROR_5:	; databit too short
 
 RX_ERROR_6:	; databit too long
     sbrs flags, FL_TSTMODE
-    rjmp PKT_START
+    rjmp RX_RESET
     
     ; pulse
     sbi PORTB, PB2
@@ -368,7 +369,7 @@ RX_ERROR_6:	; databit too long
 
 RX_ERROR_7:	; too long hi
     sbrs flags, FL_TSTMODE
-    rjmp PKT_START
+    rjmp RX_RESET
     
     ; pulse
     sbi PORTB, PB2
