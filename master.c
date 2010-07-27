@@ -79,7 +79,7 @@ int main(void) {
 	
 	// test mode enable
 	PORTB = (1<<PB1);
-	_delay_ms(200);
+	_delay_ms(75);
 	PORTB = 0;
 	
 	sei();
