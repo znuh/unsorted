@@ -77,7 +77,10 @@ int main(void) {
 	
 	TCCR1B = (1<<CS10);
 	
-	// TODO: wait for powerup
+	// test mode enable
+	PORTB = (1<<PB1);
+	_delay_ms(200);
+	PORTB = 0;
 	
 	sei();
 	
