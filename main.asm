@@ -100,8 +100,20 @@ TEST_DISABLE:
 
 LONG_DELTA:
 
-    sbis PINB, PB1
+    sbic PINB, PB1
+    rjmp LONG_LOW
+    
+    ; test mode enable
+    cpi ovf, 200
+    brsh TEST_ENABLE
+    
+    ; test mode disable
+    cpi ovf, 100
+    brsh TEST_DISABLE
+ 
     rjmp RX_ERROR_7	; ERROR: too long hi
+    
+LONG_LOW:
 
     cpi rxcnt, 3
     brlo PKT_ERROR_1	; ERROR: pkt too short
@@ -172,13 +184,6 @@ INT_0:
     cpi ovf, 1
     brlo NO_OVF
     
-    ; test mode enable
-    cpi ovf, 200
-    brsh TEST_ENABLE
-    
-    ; test mode disable
-    cpi ovf, 100
-    brsh TEST_DISABLE
     
     ; ovf > 1 - too long
     cpi ovf, 2
