@@ -25,8 +25,7 @@
 ; Z: 30/31
 
 .equ	FL_DIMVAL	= 0
-.equ	FL_TSTDISABLE	= 1
-.equ	FL_TSTMODE	= 2
+.equ	FL_TSTMODE	= 1
 
     ; RESET
     rjmp RESET
@@ -58,15 +57,6 @@ T0_OVF:
 T0_OVF_OUT:
     reti
 
-TEST_ENABLE:
-    sbr flags, (1<<FL_TSTMODE)
-    ; TODO: enable LED
-    rjmp RX_RESET
-    
-TEST_DISABLE:
-    cbr flags, (1<<FL_TSTMODE)
-    ; TODO: back to PWM mode
-    rjmp RX_RESET
 
 DIM_OFF:
     ; disable PWM
@@ -90,16 +80,34 @@ DIM_FULL:
 
     rjmp PKT_START
 
+TEST_ENABLE:
+    sbr flags, (1<<FL_TSTMODE)
+    
+    ; disable PWM
+    clr temp
+    out TCCR0A, temp
+
+    ; on, force dim=1
+    ldi temp, (0<<PB2)|(1<<PB0)
+    out PORTB, temp
+    
+    rjmp RX_RESET
+    
+TEST_DISABLE:
+    cbr flags, (1<<FL_TSTMODE)
+    ; (back to PWM mode)
+    rjmp RX_RESET
+
 LONG_DELTA:
 
     sbis PINB, PB1
-    rjmp RX_ERROR	; ERROR: too long hi
+    rjmp RX_ERROR_7	; ERROR: too long hi
 
     cpi rxcnt, 3
-    brlo PKT_ERROR	; ERROR: pkt too short
+    brlo PKT_ERROR_1	; ERROR: pkt too short
 
     cpi cksum, 0
-    brne PKT_ERROR	; ERROR: cksum invalid
+    brne PKT_ERROR_2	; ERROR: cksum invalid
 
     sbrs flags, FL_DIMVAL	; no new dimval for my addr
     rjmp PKT_START
@@ -127,12 +135,26 @@ LONG_DELTA:
     
     rjmp PKT_START
     
-PKT_ERROR:
+PKT_ERROR_1:	; packet too short
 
-    ; TODO
-    ;sbrc flags, FL_TSTMODE	; in test mode: disable LED on rx error
-    ;sbi PORTB, PB2
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
     
+    ; pulse off
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+PKT_ERROR_2:	; checksum invalid
+
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse off
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
 PKT_START:
     ; beginning of a new packet
     ldi state, 1
@@ -188,7 +210,7 @@ DELTA_DONE:
 
     ; still waiting for silence before startbit
     cpi state, 0
-    breq RX_ERROR	; ERROR: silence before start too short
+    breq RX_ERROR_3	; ERROR: silence before start too short
 
     ; receiving databit?
     cpi state, 2
@@ -196,7 +218,7 @@ DELTA_DONE:
     
     ; state = 1 -> receiving startbit
     cpi temp, 21
-    brlo RX_ERROR	; ERROR: startbit too short
+    brlo RX_ERROR_4	; ERROR: startbit too short
     
     ; calc etu
     ; sym0 lower bound = 1u - 0.25u
@@ -222,16 +244,24 @@ DATABIT:
 
     ; < lower -> error
     cp temp, sym0_lo
-    brlo RX_ERROR		; ERROR: databit too short
+    brlo RX_ERROR_5		; ERROR: databit too short
     
     ; > upper -> error
     cp temp, sym1_hi
-    brsh RX_ERROR		; ERROR: databit too long
+    brsh RX_ERROR_6		; ERROR: databit too long
     
     lsl rxbyte
     
+    ; testmode - output bit
+    sbrc flags, FL_TSTMODE
+    cbi PORTB, PB0
+    
     cp temp, sym1_lo	; sym0 -> don't add 1
     brlo DATABIT_DONE
+    
+    ; testmode - output bit
+    sbrc flags, FL_TSTMODE
+    sbi PORTB, PB0
     
     inc rxbyte
     
@@ -274,17 +304,73 @@ CKSUM_RCVD:
 ADDR_RCVD:
     mov rxaddr, rxbyte
     rjmp INT_0_RET
+        
+RX_ERROR_3:	; silence before start too short
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
     
-RX_ERROR:
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+RX_ERROR_4:	; startbit too short
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+RX_ERROR_5:	; databit too short
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+RX_ERROR_6:	; databit too long
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+RX_ERROR_7:	; too long hi
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+    ; 1 and 2
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
 
 RX_RESET:
 
     clr state
     cbr flags, (1<<FL_DIMVAL)
-    
-    ; TODO
-;    sbrc flags, FL_TSTMODE	; in test mode: disable LED on rx error
-;    sbi PORTB, PB2
     
 INT_0_RET:
     mov t0last, t0cnt
