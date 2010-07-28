@@ -177,25 +177,8 @@ LONG_LOW:
     
     rjmp PKT_START
 
-
 INT_0:
     in t0cnt, TCNT0
-    
-    ; unhandled overflow?
-    cpi t0cnt, 0
-    brne NO_OVF_INC
-    
-    ; 2nd check
-    in temp2, TIFR0
-    sbrs temp2, TOV0
-    rjmp NO_OVF_INC
-    
-    inc ovf
-    
-    ldi temp2, (1<<TOV0)
-    out TIFR0, temp2
-    
-NO_OVF_INC:
     
     ; calc delta
     
@@ -203,27 +186,25 @@ NO_OVF_INC:
     cpi ovf, 2
     brsh LONG_DELTA
     
-    cpi ovf, 1
-    brne NO_OVF
+    ; overflow?
+    cp t0last, t0cnt
+    brlo NO_OVF
     
 OVF_OCCURED:
     
-    ; >=1 overflow
     ; dt = $ff - t0last + t0cnt + 1
-    clr temp
-    ;ser temp
+    ser temp
     sub temp, t0last
     add temp, t0cnt
-    ; PROBLEM:
-    ;brcs LONG_DELTA
-    ;inc temp
-    ;cpi temp, 0
-    ;breq LONG_DELTA
+    brcs LONG_DELTA
+    inc temp
+    cpi temp, 0
+    breq LONG_DELTA
     
     rjmp DELTA_DONE
     
 NO_OVF:
-
+    
     ; no overflow
     ; dt = t0cnt - t0last
     mov temp, t0cnt
