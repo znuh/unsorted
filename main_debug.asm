@@ -58,6 +58,7 @@ T0_OVF:
 T0_OVF_OUT:
     reti
 
+
 DIM_OFF:
     ; disable PWM
     clr temp
@@ -97,12 +98,27 @@ TEST_DISABLE:
     cbr flags, (1<<FL_TSTMODE)
     ; (back to PWM mode)
     rjmp RX_RESET
+
     
 PKT_ERROR_1:	; packet too short
+
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse off
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
 PKT_ERROR_2:	; checksum invalid
 
-    sbrc flags, FL_TSTMODE
-    sbi PORTB, PB2		; LED off
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse off
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
 
 PKT_START:
     ; beginning of a new packet
@@ -297,12 +313,66 @@ ADDR_RCVD:
     rjmp INT_0_RET
         
 RX_ERROR_3:	; silence before start too short
+    sbrs flags, FL_TSTMODE
+    rjmp RX_RESET
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
 RX_ERROR_4:	; startbit too short
+    sbrs flags, FL_TSTMODE
+    rjmp RX_RESET
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
 RX_ERROR_5:	; databit too short
+    sbrs flags, FL_TSTMODE
+    rjmp RX_RESET
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
 RX_ERROR_6:	; databit too long
+    sbrs flags, FL_TSTMODE
+    rjmp RX_RESET
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
 RX_ERROR_7:	; too long hi
-    sbrc flags, FL_TSTMODE
-    sbi PORTB, PB2		; LED off
+    sbrs flags, FL_TSTMODE
+    rjmp RX_RESET
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+    ; 1 and 2
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
+
+    sbrs flags, FL_TSTMODE
+    rjmp PKT_START
+    
+    ; pulse
+    sbi PORTB, PB2
+    nop
+    cbi PORTB, PB2
 
 RX_RESET:
 
@@ -323,6 +393,10 @@ RESET:
     ldi temp, low(RAMEND)
     out SPL, temp
 
+    ; 4.8MHz/8 = 600 kHz
+    ; 600 kHz / 256 = 2.3 kHz
+    ldi temp, (1<<CS01)
+    out TCCR0B, temp
 
     ; setup PWM
     ldi temp, (1<<COM0A1)|(1<<WGM01)|(1<<WGM00)
@@ -361,34 +435,13 @@ EEPROM_WAIT:
     clr state
     clr flags
 
-    ; dim up
-
-    ldi temp, (1<<CS01)|(1<<CS00)
-    out TCCR0B, temp
-    
-    clr temp
-
-START_DIM:
-    out OCR0A, temp
-    inc temp
-WAIT:
-    in temp2, TIFR0
-    sbrs temp2, TOV0
-    rjmp WAIT
-    out TIFR0, temp2
-    cpi temp, 0
-    brne START_DIM
-
-    ; 4.8MHz/8 = 600 kHz
-    ; 600 kHz / 256 = 2.3 kHz
-    ldi temp, (1<<CS01)
-    out TCCR0B, temp
-    
     sei
     
     ; enable INT0 & sleep mode
     ldi temp, (1<<SE)|(1<<ISC00)
     out MCUCR, temp
+    
+    ; TODO: dim up on start
     
 LOOP:
     sleep
