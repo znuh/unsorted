@@ -85,12 +85,17 @@ int main(void) {
 	sei();
 	
 	while(1) {
-		put_frame(0x01);
-		put_frame(dimval>>8);
+		uint8_t addr;
+		
+		for(addr=0; addr<10; addr++) {
+			put_frame(addr);
+			put_frame(dimval>>8);
+			send_frame();
+			while(TIMSK) {} // wait while send busy
+		}
 		dimval+= (dimval>>11) + 1;
 		//dimval+=0x100;
-		send_frame();
-		while(TIMSK) {} // wait while send busy
+		
 		//_delay_us(127 - (dimval>>9));
 		//_delay_ms(1000);
 	}
