@@ -62,7 +62,7 @@ void uart_send(char *buf) {
 }
 
 int main(void) {
-	char buf[] = "*11223344,11223344,11#\n";
+	char buf[30];
 	
 	DDRD = 0;
 	PORTD = (1<<PD2); // pup for INT0
@@ -91,6 +91,12 @@ int main(void) {
 	GIMSK = (1<<INT0);
 	
 	set_sleep_mode(SLEEP_MODE_IDLE);
+	
+	buf[0]='*';
+	buf[9] = buf[18] = ',';
+	buf[21]='#';
+	buf[22]='\n';
+	buf[23]=0;
 	
 	while(1) {
 		
