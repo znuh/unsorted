@@ -95,8 +95,9 @@ int main(void) {
 	buf[0]='*';
 	buf[9] = buf[18] = ',';
 	buf[21]='#';
-	buf[22]='\n';
-	buf[23]=0;
+	buf[22]='\r';
+	buf[23]='\n';
+	buf[24]=0;
 	
 	while(1) {
 		
