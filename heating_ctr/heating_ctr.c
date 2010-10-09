@@ -12,27 +12,35 @@
 volatile uint32_t cnt=0;
 volatile uint32_t mark_cnt=0;
 
-volatile uint8_t send_request = 1;
-volatile uint8_t mark_request = 0;
+volatile uint8_t events = 0;
 
-uint8_t ee_mem[128] EEMEM;
-const uint8_t *ee_ptr = ee_mem;
+#define EVT_TIMER		1
+#define EVT_CNTR		2
+#define EVT_MARK		4
+
+#define EE_MEM		((const uint8_t *)0)
+#define EE_SIZE		128
+
+const uint8_t *ee_ptr = EE_MEM;
 uint32_t ee_cnt;
 
+uint32_t cnt_copy;
+
 ISR(INT0_vect) {
-	if(mark_request)
+	if(events & EVT_MARK)
 		return;
 	
 	mark_cnt = cnt;
-	mark_request = 1;
+	events |= EVT_MARK;
 }
 
 ISR(TIMER0_OVF_vect) {
 	cnt++;
+	events |= EVT_CNTR;
 }
 
 ISR(TIMER1_OVF_vect) {
-	send_request = 1;
+	events |= EVT_TIMER;
 }
 
 uint8_t nibble2hex(uint8_t n) {
@@ -71,16 +79,16 @@ void write_eeprom(void) {
 }
 
 void load_eeprom(void) {
-	const uint8_t *ptr = ee_mem;
+	const uint8_t *ptr = EE_MEM;
 	uint32_t val=0;
 	
 	do {
-		uint8_t cksum=0x5A;
+		uint8_t ckval=0x5A;
 		uint8_t i=4;
 		
 		while(1) {
 			uint8_t dbyte = ~(eeprom_read_byte(ptr++));
-			cksum ^= dbyte;
+			ckval ^= dbyte;
 			
 			if(!(i--))
 				break;
@@ -90,19 +98,16 @@ void load_eeprom(void) {
 			
 		}
 		
-		if((!cksum) && (val > cnt)) {
+		if((!ckval) && (val > cnt)) {
 			cnt = val;
 			ee_ptr = ptr;
 		}
 		
-	} while(ptr < (ee_mem + (128/5)));
+	} while(ptr < (EE_MEM + (EE_SIZE/5)));
 	
 	// handle ptr rollover
-	if(ee_ptr >= (ee_mem + (128/5)))
-		ee_ptr = ee_mem;
-	
-	// save eeprom val
-	ee_cnt = cnt;
+	if(ee_ptr >= (EE_MEM + (EE_SIZE/5)))
+		ee_ptr = EE_MEM;
 }
 
 int main(void) {
@@ -145,13 +150,12 @@ int main(void) {
 	while(1) {
 		
 		cli();
-				
-		if(send_request) {
-			uint32_t cnt_copy = cnt;
+		
+		if(events & EVT_TIMER) {
 			uint32_t mark_copy = mark_cnt;
+			uint8_t evts_copy = events;
 			
-			send_request = 0;
-			mark_request = 0;
+			events = 0;
 			
 			sei();
 			
@@ -165,10 +169,8 @@ int main(void) {
 			
 			uart_send(buf);
 			
-			if(ee_cnt != cnt_copy) { // TODO: additional div
-				ee_cnt = cnt_copy;
-				//write_eeprom();
-			}
+			if(evts_copy & EVT_CNTR) // TODO: additional div
+				write_eeprom();
 			
 			PORTB |= (1<<PB7);	// LED off
 		}
