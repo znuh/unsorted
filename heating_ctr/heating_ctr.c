@@ -3,6 +3,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include <avr/eeprom.h>
 
 #include <util/delay.h>
 
@@ -13,6 +14,10 @@ volatile uint32_t mark_cnt=0;
 
 volatile uint8_t send_request = 1;
 volatile uint8_t mark_request = 0;
+
+uint8_t ee_mem[128] EEMEM;
+const uint8_t *ee_ptr = ee_mem;
+uint32_t ee_cnt;
 
 ISR(INT0_vect) {
 	if(mark_request)
@@ -61,12 +66,48 @@ void uart_send(char *buf) {
 	}
 }
 
+void write_eeprom(void) {
+	// TODO: write to ee_ptr, inc ee_ptr
+}
+
+void load_eeprom(void) {
+	const uint8_t *ptr = ee_mem;
+	uint32_t val=0;
+	
+	do {
+		uint8_t cksum=0x5A;
+		uint8_t i=4;
+		
+		while(1) {
+			uint8_t dbyte = ~(eeprom_read_byte(ptr++));
+			cksum ^= dbyte;
+			
+			if(!(i--))
+				break;
+			
+			val <<= 8;
+			val |= dbyte;
+			
+		}
+		
+		if((!cksum) && (val > cnt)) {
+			cnt = val;
+			ee_ptr = ptr;
+		}
+		
+	} while(ptr < (ee_mem + (128/5)));
+	
+	// handle ptr rollover
+	if(ee_ptr >= (ee_mem + (128/5)))
+		ee_ptr = ee_mem;
+	
+	// save eeprom val
+	ee_cnt = cnt;
+}
+
 int main(void) {
 	char buf[30];
-	
-	DDRD = 0;
-	PORTD = (1<<PD2); // pup for INT0
-	
+		
 	PORTB = (1<<PB7);
 	DDRB = (1<<PB7);
 	
@@ -99,6 +140,8 @@ int main(void) {
 	buf[23]='\n';
 	buf[24]=0;
 	
+	//load_eeprom();
+	
 	while(1) {
 		
 		cli();
@@ -121,6 +164,11 @@ int main(void) {
 			cksum((uint8_t *)buf);
 			
 			uart_send(buf);
+			
+			if(ee_cnt != cnt_copy) { // TODO: additional div
+				ee_cnt = cnt_copy;
+				//write_eeprom();
+			}
 			
 			PORTB |= (1<<PB7);	// LED off
 		}
