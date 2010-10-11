@@ -9,10 +9,10 @@
 
 #include <stdint.h>
 
-volatile uint32_t cnt=0;
-volatile uint32_t mark_cnt=0;
+volatile uint32_t 		cnt		=0;
+volatile uint32_t 		mark_cnt	=0;
 
-volatile uint8_t events = 0;
+volatile uint8_t 		events 	= 0;
 
 #define EVT_TIMER		1
 #define EVT_CNTR		2
@@ -21,10 +21,19 @@ volatile uint8_t events = 0;
 #define EE_MEM		((const uint8_t *)0)
 #define EE_SIZE		128
 
-const uint8_t *ee_ptr = EE_MEM;
-uint32_t ee_cnt;
+/*
+	f_T1ovf = 1MHz/(65536*1024) = 0.014... Hz
+	-> ~53.64 times/hr 
+	=> eeprom written ~every 66 secs of operational time
+	
+	eeprom life = 100k writes, w/ wear levelling x25 = 2.5Mwrites
+	* 66 secs = 165Msecs lifetime = ~5 years
+	* EE_WDIV = ~20 years lifetime for eeprom
+	(written every 66*4 = 264 secs = 4:24 min:sec)
+*/
+#define EE_WRDIV		4
 
-uint32_t cnt_copy;
+const uint8_t 			*ee_ptr 	= EE_MEM;
 
 ISR(INT0_vect) {
 	if(events & EVT_MARK)
@@ -74,7 +83,7 @@ void uart_send(char *buf) {
 	}
 }
 
-void write_eeprom(void) {
+void write_eeprom(uint32_t val) {
 	// TODO: write to ee_ptr, inc ee_ptr
 }
 
@@ -112,7 +121,8 @@ void load_eeprom(void) {
 
 int main(void) {
 	char buf[30];
-		
+	uint8_t ee_timer = 0;
+	
 	PORTB = (1<<PB7);
 	DDRB = (1<<PB7);
 	
@@ -145,15 +155,16 @@ int main(void) {
 	buf[23]='\n';
 	buf[24]=0;
 	
-	//load_eeprom();
+	load_eeprom();
 	
 	while(1) {
 		
 		cli();
 		
 		if(events & EVT_TIMER) {
-			uint32_t mark_copy = mark_cnt;
-			uint8_t evts_copy = events;
+			uint32_t cnt_copy 	= cnt;
+			uint32_t mark_copy 	= mark_cnt;
+			uint8_t evts_copy 	= events;
 			
 			events = 0;
 			
@@ -169,8 +180,15 @@ int main(void) {
 			
 			uart_send(buf);
 			
-			if(evts_copy & EVT_CNTR) // TODO: additional div
-				write_eeprom();
+			/* eeprom write pending? */
+			if(ee_timer) {
+				ee_timer--;
+				
+				if(!ee_timer)
+					write_eeprom(cnt_copy);
+			}
+			else if(evts_copy & EVT_CNTR)
+				ee_timer = EE_WRDIV; 	// counter changed -> schedule eeprom write
 			
 			PORTB |= (1<<PB7);	// LED off
 		}
