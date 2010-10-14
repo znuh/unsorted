@@ -9,17 +9,17 @@
 
 #include <stdint.h>
 
-volatile uint32_t 		cnt		=0;
-volatile uint32_t 		mark_cnt	=0;
+static volatile uint32_t 		cnt		=0;
+static volatile uint32_t 		mark_cnt	=0;
 
-volatile uint8_t 		events 	= 0;
+static volatile uint8_t 		events 	= 0;
 
-#define EVT_TIMER		1
-#define EVT_CNTR		2
-#define EVT_MARK		4
+#define EVT_TIMER			1
+#define EVT_CNTR			2
+#define EVT_MARK			4
 
-#define EE_MEM		((const uint8_t *)0)
-#define EE_SIZE		128
+#define EE_MEM			((const uint8_t *)0)
+#define EE_SIZE			128
 
 /*
 	f_T1ovf = 1MHz/(65536*1024) = 0.014... Hz
@@ -31,9 +31,9 @@ volatile uint8_t 		events 	= 0;
 	* EE_WDIV = ~20 years lifetime for eeprom
 	(written every 66*4 = 264 secs = 4:24 min:sec)
 */
-#define EE_WRDIV		4
+#define EE_WRDIV			4
 
-const uint8_t 			*ee_ptr 	= EE_MEM;
+static const uint8_t 		*ee_ptr 	= EE_MEM;
 
 ISR(INT0_vect) {
 	if(events & EVT_MARK)
@@ -52,11 +52,11 @@ ISR(TIMER1_OVF_vect) {
 	events |= EVT_TIMER;
 }
 
-uint8_t nibble2hex(uint8_t n) {
+static uint8_t nibble2hex(uint8_t n) {
 	return (n + ((n < 10) ? ('0') : ('a' - 10)));
 }
 
-void u32tostr(uint8_t *buf, uint32_t n) {
+static void u32tostr(uint8_t *buf, uint32_t n) {
 	uint8_t *ptr = buf+8;
 	
 	do {
@@ -66,7 +66,7 @@ void u32tostr(uint8_t *buf, uint32_t n) {
 	}while(buf != ptr);
 }
 
-void cksum(uint8_t *buf) {
+static void cksum(uint8_t *buf) {
 	uint8_t sum=0;
 	
 	for(;*buf;buf++)
@@ -76,18 +76,49 @@ void cksum(uint8_t *buf) {
 	*buf = nibble2hex(sum&0xf);
 }
 
-void uart_send(char *buf) {
+static void uart_send(char *buf) {
 	for(;*buf;buf++) {
 		loop_until_bit_is_set( UCSRA, UDRE );
 		UDR = *buf;
 	}
 }
 
-void write_eeprom(uint32_t val) {
-	// TODO: write to ee_ptr, inc ee_ptr
+static void eeprom_update_byte( const uint8_t *p, uint8_t val) {
+	if(eeprom_read_byte(p) != val)
+		eeprom_write_byte((uint8_t *)p, val);
 }
 
-void load_eeprom(void) {
+static void write_eeprom(uint32_t val) {
+	uint8_t i=4;
+	uint8_t ckval = 0x5A;
+	
+	/* write from least to most significant byte.
+	    This way, a partial written counter cannot
+	    be any higher, than the actual value, since
+	    the value already present in the MSBs is
+	    less or equal to the actual counter value,
+	    since it's the same-significance-part of
+	    an old counter value */
+	
+	ee_ptr+= 3;
+	
+	do {
+		uint8_t dbyte = val&0xff;
+		ckval ^= dbyte;
+		eeprom_update_byte(ee_ptr--, ~dbyte);
+		val>>=8;
+	} while(--i);
+	
+	/* write cksum */
+	ee_ptr+=4;
+	eeprom_update_byte(ee_ptr++, ~ckval);
+	
+	// handle ptr rollover
+	if(ee_ptr >= (EE_MEM + (EE_SIZE/5)))
+		ee_ptr = EE_MEM;
+}
+
+static inline void load_eeprom(void) {
 	const uint8_t *ptr = EE_MEM;
 	uint32_t val=0;
 	
