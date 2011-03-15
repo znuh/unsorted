@@ -1,9 +1,25 @@
+/*
+ * 
+ * TODO:
+ *
+ * - handle overflows (>65k cpm / >655 uSv/h)
+ * - dead time compensation
+ * - ui w/ input
+ *    - switch timeframe (n minutes)
+ *    - sv_factor setting (calibration)
+ *    - accumulated dose mode
+ * - time-to-count: http://en.wikipedia.org/wiki/Dead_time#Time-To-Count
+ *
+ * dead time is ~190us -> max. 5.2k cps / 316k cpm -> 3.2 mSv/h w/o compensation
+ *
+ */
+
 #define F_CPU	8000000UL
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #define DDR_SPI 	DDRB
 #define DD_MOSI 	PB5
@@ -17,6 +33,8 @@
 #define DOGM_INSTR	{ PORTB &= ~((1<<DD_nCS) | (1<<DD_RS)); }
 #define DOGM_DATA 	{ PORTB &= ~(1<<DD_nCS); }
 #define DOGM_DONE	{ PORTB |= (1<<DD_nCS) | (1<<DD_RS); }
+
+/* "dogm" = EA DOGM163 LCD */
 
 static void dogm_clear(void) {
 
@@ -97,7 +115,7 @@ static volatile uint8_t update = 0;
 static volatile uint16_t sec10_count = 0;
 static volatile uint16_t sec60_count = 0;
 
-static volatile uint16_t buf[60];
+static volatile uint16_t sample_buf[60];
 static volatile uint8_t sec10_idx = 60-10;
 static volatile uint8_t sec60_idx = 0;
 
@@ -122,13 +140,13 @@ ISR(TIMER0_OVF_vect) {
 		
 		last_cnt = new_cnt;
 		
-		sec10_count -= buf[sec10_idx];
-		sec60_count -= buf[sec60_idx];
+		sec10_count -= sample_buf[sec10_idx];
+		sec60_count -= sample_buf[sec60_idx];
 		
 		sec10_count += delta_cnt;
 		sec60_count += delta_cnt;
 		
-		buf[sec60_idx++] = delta_cnt;
+		sample_buf[sec60_idx++] = delta_cnt;
 		if(sec60_idx >= 60)
 			sec60_idx = 0;
 		
@@ -145,12 +163,39 @@ ISR(TIMER0_OVF_vect) {
 	}
 }
 
-void main(void) {
-	char txtbuf[16];
+static void u16_to_dec(uint16_t val, char *buf, uint8_t pt_pos) {
+	uint8_t i, n = pt_pos ? 6 : 5;
+	uint8_t zeroes = pt_pos + 1;
+
+	buf+= n - 1;
+	
+	for(i=0;i<n;i++,buf--) {
+		char c = zeroes ? '0' : ' ';
+
+		if((pt_pos) && (i == pt_pos)) {
+			c = '.';
+			zeroes=2;
+		}
+		else if(val) {
+			uint16_t new = val/10;
+			c = val - (new * 10) + '0';		
+			val = new;
+		}
+		if(zeroes)
+			zeroes--;
+		*buf = c;
+	}
+}
+
+int main(void) {
+	char txtbuf[16*3+1]="       cps             cpm             uSv/h";
+	uint8_t sv_factor = 15; // TODO: checkme!
 	uint8_t i, last=0;
 	
+	txtbuf[15]=0;
+	
 	for(i=0; i<60; i++)
-		buf[i]=0;
+		sample_buf[i]=0;
 	
 	init();
 
@@ -180,16 +225,26 @@ void main(void) {
 			sei();
 			
 			if(rt >= 10) {
-				dogm_cursor(0, 0);
-				sprintf(txtbuf,"%3d C/10s",sec10_count);
-				dogm_print(txtbuf);
-			}
+				u16_to_dec(sec10_copy, txtbuf, 1);
 
-			if(rt >= 60) {
-				dogm_cursor(1,0);
-				sprintf(txtbuf,"%3d C/60s",sec60_count);
-				dogm_print(txtbuf);			
-			}
-		}
-	}
+				if(rt >= 60) {
+					uint8_t pt_pos = 1;
+					
+					txtbuf[15]=' '; // enable 2nd + 3rd lines
+					
+					u16_to_dec(sec60_copy, txtbuf+16+1, 0);
+
+					if(sec60_copy < 6554) {
+						pt_pos = 2;
+						sec60_copy *= 10;
+					}
+
+					u16_to_dec(sec60_copy / sv_factor, txtbuf+(16*2), pt_pos);				
+				}
+				dogm_cursor(0, 0);
+				dogm_print(txtbuf);
+			} // rt >= 10
+		} // new != last
+	} // while (1)
+	return 0;
 }
