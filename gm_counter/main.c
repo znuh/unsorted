@@ -113,7 +113,7 @@ static volatile uint8_t ovf_cnt = 0;
 static volatile uint8_t update = 0;
 
 static volatile uint16_t sec10_count = 0;
-static volatile uint16_t sec60_count = 0;
+static volatile uint32_t sec60_count = 0;
 
 static volatile uint16_t sample_buf[60];
 static volatile uint8_t sec10_idx = 60-10;
@@ -163,6 +163,30 @@ ISR(TIMER0_OVF_vect) {
 	}
 }
 
+static void u32_to_dec(uint32_t val, char *buf, uint8_t pt_pos) {
+	uint8_t i, n = pt_pos ? 11 : 10;
+	uint8_t zeroes = pt_pos + 1;
+
+	buf+= n - 1;
+	
+	for(i=0;i<n;i++,buf--) {
+		char c = zeroes ? '0' : ' ';
+
+		if((pt_pos) && (i == pt_pos)) {
+			c = '.';
+			zeroes=2;
+		}
+		else if(val) {
+			uint16_t new = val/10;
+			c = val - (new * 10) + '0';		
+			val = new;
+		}
+		if(zeroes)
+			zeroes--;
+		*buf = c;
+	}
+}
+
 static void u16_to_dec(uint16_t val, char *buf, uint8_t pt_pos) {
 	uint8_t i, n = pt_pos ? 6 : 5;
 	uint8_t zeroes = pt_pos + 1;
@@ -188,7 +212,7 @@ static void u16_to_dec(uint16_t val, char *buf, uint8_t pt_pos) {
 }
 
 int main(void) {
-	char txtbuf[16*3+1]="       cps             cpm             uSv/h";
+	char txtbuf[16*3+1]="           cps             cpm             uSv/h";
 	uint8_t sv_factor = 15; // TODO: checkme!
 	uint8_t i, last=0;
 	
@@ -215,7 +239,8 @@ int main(void) {
 		sei();
 		
 		if(new != last) {
-			uint16_t sec10_copy, sec60_copy;
+			uint16_t sec10_copy;
+			uint32_t sec60_copy;
 
 			last = new;
 			
@@ -225,21 +250,21 @@ int main(void) {
 			sei();
 			
 			if(rt >= 10) {
-				u16_to_dec(sec10_copy, txtbuf, 1);
+				u16_to_dec(sec10_copy, txtbuf+4, 1);
 
 				if(rt >= 60) {
 					uint8_t pt_pos = 1;
 					
 					txtbuf[15]=' '; // enable 2nd + 3rd lines
 					
-					u16_to_dec(sec60_copy, txtbuf+16+1, 0);
+					u32_to_dec(sec60_copy, txtbuf+16, 0);
 
-					if(sec60_copy < 6554) {
+					//if(sec60_copy < 6554) {
 						pt_pos = 2;
 						sec60_copy *= 10;
-					}
+					//}
 
-					u16_to_dec(sec60_copy / sv_factor, txtbuf+(16*2), pt_pos);				
+					u32_to_dec(sec60_copy / sv_factor, txtbuf+(16*2)-1, pt_pos);				
 				}
 				dogm_cursor(0, 0);
 				dogm_print(txtbuf);
