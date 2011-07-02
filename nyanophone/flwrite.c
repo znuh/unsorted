@@ -84,18 +84,6 @@ static uint8_t wait_flash(uint8_t send_uart) {
 static void write_flash(void) {
 	uint16_t sector;
 	
-	/* write enable */
-	spi_select();
-	spi_xfer(CMD_WRITE_ENABLE);
-	spi_deselect();
-
-	/* chip erase */
-	spi_select();
-	spi_xfer(CMD_CHIP_ERASE);
-	spi_deselect();
-
-	wait_flash(1);
-
 	/* unprotect sectors */
 	for(sector=0; sector<0x800; sector+=0x20) {
 		
@@ -112,6 +100,18 @@ static void write_flash(void) {
 		spi_xfer(0);
 		spi_deselect();
 	}
+
+	/* write enable */
+	spi_select();
+	spi_xfer(CMD_WRITE_ENABLE);
+	spi_deselect();
+
+	/* chip erase */
+	spi_select();
+	spi_xfer(CMD_CHIP_ERASE);
+	spi_deselect();
+
+	wait_flash(1);
 
 	/* write enable */
 	spi_select();
