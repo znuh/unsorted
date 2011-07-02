@@ -85,17 +85,25 @@ int main(void) {
 	sei();
 	
 	while(1) {
-		uint8_t addr;
+		uint16_t addr=4;
 		
-		for(addr=0; addr<10; addr++) {
-			put_frame(addr);
-			put_frame(dimval>>8);
-			send_frame();
-			while(TIMSK) {} // wait while send busy
+		for(addr=1; addr<=8; addr++) {
+			if(addr<=4)
+				dimval=0;
+			else
+				dimval=0xa0;
+//			dimval=0xff;
+//			for(dimval=0;dimval<=0x100;dimval++) {
+				put_frame(addr&0xff);
+				put_frame(dimval&0xff);
+				send_frame();
+				while(TIMSK) {} // wait while send busy
+//			}
+	//		_delay_us(100);
 		}
-		dimval+= (dimval>>11) + 1;
+//		dimval+= (dimval>>11) + 1;
 		//dimval+=0x100;
-		
+		//_delay_ms(10);
 		//_delay_us(127 - (dimval>>9));
 		//_delay_ms(1000);
 	}

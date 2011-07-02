@@ -2,6 +2,22 @@
 
 ; r0/1: bootloader
 
+.macro	blink
+    ; debug indicator    
+;    inc bla
+;    cpi bla, 4
+;    brne NOBLINK
+
+;    clr bla
+    in blal, PORTB
+    ldi bla, (1<<PB4)
+    eor bla, blal
+    out PORTB, bla
+
+;NOBLINK:
+
+.endm
+
 .def	myaddr	= r2
 .def	rxaddr	= r3
 .def	rxbyte	= r4
@@ -21,12 +37,14 @@
 .def	flags	= r23
 .def	t0cnt	= r24
 
+.def	bla	= r25
+.def	blal	= r10
+
 ; X: 26/27
 ; Y: 28/29
 ; Z: 30/31
 
 .equ	FL_DIMVAL	= 0
-.equ	FL_TSTMODE	= 1
 
     ; RESET
     rjmp RESET
@@ -52,10 +70,13 @@
 T0_OVF:
     cpi ovf, $ff
     breq T0_OVF_OUT
+
     
     inc ovf
+    reti
     
 T0_OVF_OUT:
+    
     reti
 
 DIM_OFF:
@@ -80,67 +101,43 @@ DIM_FULL:
 
     rjmp PKT_START
 
-TEST_ENABLE:
-    sbr flags, (1<<FL_TSTMODE)
-    
-    ; disable PWM
-    clr temp
-    out TCCR0A, temp
-
-    ; on, force dim=1
-    ldi temp, (0<<PB2)|(1<<PB0)
-    out PORTB, temp
-    
-    rjmp RX_RESET
-    
-TEST_DISABLE:
-    cbr flags, (1<<FL_TSTMODE)
-    ; (back to PWM mode)
-    rjmp RX_RESET
-    
 PKT_ERROR_1:	; packet too short
+;blink
 PKT_ERROR_2:	; checksum invalid
 
-    sbrc flags, FL_TSTMODE
-    sbi PORTB, PB2		; LED off
+;blink
 
 PKT_START:
     ; beginning of a new packet
     ldi state, 1
     clr rxcnt
-    cbr flags, (1<<FL_DIMVAL)
+    ;cbr flags, (1<<FL_DIMVAL)
+    clr flags
+    clr cksum
+    
+    ;blink
     
     rjmp INT_0_RET
 
 LONG_DELTA:
 
+;blink
     sbic PINB, PB1
     rjmp LONG_LOW
     
-    ; test mode enable
-    cpi ovf, 200
-    brsh TEST_ENABLE
-    
-    ; test mode disable
-    cpi ovf, 100
-    brsh TEST_DISABLE
- 
     rjmp RX_ERROR_7	; ERROR: too long hi
     
 LONG_LOW:
-
+;blink
     cpi rxcnt, 3
     brlo PKT_ERROR_1	; ERROR: pkt too short
-
+;blink
     cpi cksum, 0
     brne PKT_ERROR_2	; ERROR: cksum invalid
 
     sbrs flags, FL_DIMVAL	; no new dimval for my addr
     rjmp PKT_START
-    
-    sbrc flags, FL_TSTMODE	; skip dimval if test mode enabled
-    rjmp PKT_START
-    
+
     cpi dimval, 0	; powerdown
     breq DIM_OFF
     
@@ -196,6 +193,8 @@ NO_OVF:
     
 DELTA_DONE:
 
+;blink
+
     cpi temp, 45
     brsh LONG_DELTA
 
@@ -228,6 +227,8 @@ DELTA_DONE:
     inc sym1_hi		; for brsh
     
     ldi state, 2
+
+;blink
     
     rjmp INT_0_RET
     
@@ -243,16 +244,8 @@ DATABIT:
     
     lsl rxbyte
     
-    ; testmode - output bit
-    sbrc flags, FL_TSTMODE
-    cbi PORTB, PB0
-    
     cp temp, sym1_lo	; sym0 -> don't add 1
     brlo DATABIT_DONE
-    
-    ; testmode - output bit
-    sbrc flags, FL_TSTMODE
-    sbi PORTB, PB0
     
     inc rxbyte
     
@@ -297,12 +290,28 @@ ADDR_RCVD:
     rjmp INT_0_RET
         
 RX_ERROR_3:	; silence before start too short
+; triggered
+;blink
+rjmp RX_RESET
+
 RX_ERROR_4:	; startbit too short
+; not triggered
+;blink
+rjmp RX_RESET
+
 RX_ERROR_5:	; databit too short
+; not triggered
+;blink
+rjmp RX_RESET
+
 RX_ERROR_6:	; databit too long
+; not triggered
+;blink
+rjmp RX_RESET
+
 RX_ERROR_7:	; too long hi
-    sbrc flags, FL_TSTMODE
-    sbi PORTB, PB2		; LED off
+; not triggered?
+;blink
 
 RX_RESET:
 
@@ -312,6 +321,7 @@ RX_RESET:
 INT_0_RET:
     mov t0last, t0cnt
     clr ovf
+;blink
     reti
 
 ; PB1 = INT0 = PCINT1 = rxbyte in
@@ -323,7 +333,6 @@ RESET:
     ldi temp, low(RAMEND)
     out SPL, temp
 
-
     ; setup PWM
     ldi temp, (1<<COM0A1)|(1<<WGM01)|(1<<WGM00)
     out TCCR0A, temp
@@ -333,9 +342,9 @@ RESET:
     out OCR0A, temp
 
     ; PB2: off, PB0/OC0A: dim
-    ldi temp, (0<<PB2)|(1<<PB0)
+    ldi temp, (0<<PB2)|(1<<PB0)|(1<<PB4)
     out PORTB, temp
-    ldi temp, (1<<PB2)|(1<<PB0)
+    ldi temp, (1<<PB2)|(1<<PB0)|(1<<PB4)
     out DDRB, temp
 
     ; enable T0 overflow int
@@ -363,7 +372,7 @@ EEPROM_WAIT:
 
     ; dim up
 
-    ldi temp, (1<<CS01)|(1<<CS00)
+    ldi temp, (1<<CS01);|(1<<CS00)
     out TCCR0B, temp
     
     clr temp
@@ -379,16 +388,26 @@ WAIT:
     cpi temp, 0
     brne START_DIM
 
+    ; disable PWM
+    clr temp
+    out TCCR0A, temp
+
+    ; on, force dim=1
+    ldi temp, (0<<PB2)|(1<<PB0)
+    out PORTB, temp
+
     ; 4.8MHz/8 = 600 kHz
     ; 600 kHz / 256 = 2.3 kHz
-    ldi temp, (1<<CS01)
-    out TCCR0B, temp
-    
-    sei
-    
+;    ldi temp, (1<<CS01)
+;    out TCCR0B, temp
+   
+;    sei
+ 
     ; enable INT0 & sleep mode
     ldi temp, (1<<SE)|(1<<ISC00)
     out MCUCR, temp
+    
+    sei
     
 LOOP:
     sleep
