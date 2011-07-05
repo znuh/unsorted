@@ -13,7 +13,7 @@ uint16_t *fptr = frame+9;
 uint8_t flen=0;
 uint8_t cksum=0;
 
-volatile uint8_t vals[8];
+volatile uint8_t vals[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static uint8_t have_addr = 0;
 static uint8_t addr = 0;
 
