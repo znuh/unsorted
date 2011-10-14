@@ -83,10 +83,12 @@ static void uart_send(char *buf) {
 	}
 }
 
+#ifndef eeprom_update_byte
 static void eeprom_update_byte( const uint8_t *p, uint8_t val) {
 	if(eeprom_read_byte(p) != val)
 		eeprom_write_byte((uint8_t *)p, val);
 }
+#endif
 
 static void write_eeprom(uint32_t val) {
 	uint8_t i=4;
