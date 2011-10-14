@@ -13,6 +13,22 @@ uint16_t *fptr = frame+9;
 uint8_t flen=0;
 uint8_t cksum=0;
 
+volatile uint8_t vals[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+static uint8_t have_addr = 0;
+static uint8_t addr = 0;
+
+ISR(USART_RXC_vect) {
+	uint8_t val = UDR;
+	if(have_addr) {
+		vals[addr] = val;
+		have_addr = 0;
+	}
+	else if (val <= 8) {
+		have_addr = 1;
+		addr = val-1;
+	}
+}
+
 ISR(TIMER1_COMPA_vect) {
 	OCR1A += (*fptr);
 	fptr++;
@@ -69,8 +85,16 @@ void send_frame(void) {
 	- doublebuffer
 */
 
+static uint8_t uart_rcv(void) {
+	uint8_t d;
+	while(!(UCSRA & (1<<RXC)));
+	d = UDR;
+	UDR = d;
+	return d;
+}
+
 int main(void) {
-	uint16_t dimval = 0;
+	uint8_t i;
 	
 	PORTB = 0;
 	DDRB = (1<<PB1);
@@ -81,23 +105,21 @@ int main(void) {
 	PORTB = (1<<PB1);
 	_delay_ms(75);
 	PORTB = 0;
+
+	UCSRB = (1<<RXCIE) | (1<<RXEN) | (1<<TXEN);
+	UCSRC = (1<<URSEL) | (1<<UCSZ1) | (1<<UCSZ0);
+	UBRRH = 0;
+	UBRRL = 12;
 	
 	sei();
 	
 	while(1) {
-		uint8_t addr;
-		
-		for(addr=0; addr<10; addr++) {
-			put_frame(addr);
-			put_frame(dimval>>8);
+		for(i=1;i<=8;i++) {
+			put_frame(i);
+			put_frame(vals[i-1]);
 			send_frame();
 			while(TIMSK) {} // wait while send busy
 		}
-		dimval+= (dimval>>11) + 1;
-		//dimval+=0x100;
-		
-		//_delay_us(127 - (dimval>>9));
-		//_delay_ms(1000);
 	}
 	
 	return 0;
