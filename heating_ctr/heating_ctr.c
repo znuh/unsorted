@@ -52,6 +52,13 @@ ISR(TIMER1_OVF_vect) {
 	events |= EVT_TIMER;
 }
 
+static volatile uint16_t	tof = 0;
+
+ISR(TIMER1_CAPT_vect) {
+	tof = ICR1;
+	TIMSK &= ~(1<<ICIE1);
+}
+
 static uint8_t nibble2hex(uint8_t n) {
 	return (n + ((n < 10) ? ('0') : ('a' - 10)));
 }
@@ -152,12 +159,61 @@ static inline void load_eeprom(void) {
 		ee_ptr = EE_MEM;
 }
 
+static inline uint16_t ping(void) {
+	uint16_t res;
+
+	tof = 0xffff;
+	
+	// reconfigure T1
+	TIMSK &= ~(1<<TOIE1);
+	TCCR1B = 0;
+	TCNT1 = 0;
+	
+	// send ping
+	DDRD |= (1<<PD6);
+	_delay_us(400);
+	
+	cli();
+	DDRD &= ~(1<<PD6);
+
+	// start timer
+	TCCR1B = (1<<ICNC1)|(1<<CS11);
+	sei();
+
+	// sensor deadtime
+	_delay_us(500);
+
+	// enable ICP
+	TIFR = (1<<ICF1);
+	TIMSK |= (1<<ICIE1);
+
+	// wait 15ms (~2m)
+	_delay_ms(15);
+
+	cli();
+	res = tof;
+	sei();
+
+	// reconfigure T1
+	TCCR1B = 0;
+	TCNT1 = 0;
+	TIMSK &= ~(1<<ICIE1);
+	TIFR = (1<<TOV1);
+	TIMSK |= (1<<TOIE1);
+	TCCR1B = (5<<CS10);
+	
+	return res;
+}
+
 int main(void) {
-	char buf[30];
+	char buf[34];
 	uint8_t ee_timer = 0;
 	
 	PORTB = (1<<PB7);
 	DDRB = (1<<PB7);
+
+	PORTD = 0;
+	DDRD = 0;
 	
 	UBRRH=0;
 	UBRRL = 12; // 9,6 kBaud
@@ -182,11 +238,12 @@ int main(void) {
 	set_sleep_mode(SLEEP_MODE_IDLE);
 	
 	buf[0]='*';
-	buf[9] = buf[18] = ',';
-	buf[21]='#';
-	buf[22]='\r';
-	buf[23]='\n';
-	buf[24]=0;
+	buf[1+8] = buf[1+8+1+8] = buf[1+8+1+8+1+8] = ',';
+
+	buf[30]='#';
+	buf[31]='\r';
+	buf[32]='\n';
+	buf[33]=0;
 	
 	load_eeprom();
 	
@@ -198,17 +255,21 @@ int main(void) {
 			uint32_t cnt_copy 	= cnt;
 			uint32_t mark_copy 	= mark_cnt;
 			uint8_t evts_copy 	= events;
+			uint32_t echo;
 			
 			events = 0;
 			
 			sei();
 			
 			PORTB &= ~(1<<PB7);	// LED on
+
+			echo = ping();
 			
 			u32tostr((uint8_t*)buf+1, cnt_copy);
 			u32tostr((uint8_t*)buf+1+8+1, mark_copy);
+			u32tostr((uint8_t*)buf+1+8+1+8+1, echo);
 			
-			buf[19]=0;
+			buf[28]=0;
 			cksum((uint8_t *)buf);
 			
 			uart_send(buf);
