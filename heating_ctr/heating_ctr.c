@@ -168,17 +168,15 @@ static inline uint16_t ping(void) {
 	TIMSK &= ~(1<<TOIE1);
 	TCCR1B = 0;
 	TCNT1 = 0;
-	
-	// send ping
-	DDRD |= (1<<PD6);
-	_delay_us(400);
-	
-	cli();
-	DDRD &= ~(1<<PD6);
 
-	// start timer
+	// start timer & send ping
+	cli();
 	TCCR1B = (1<<ICNC1)|(1<<CS11);
+	DDRD |= (1<<PD6);
 	sei();
+	
+	_delay_us(400);
+	DDRD &= ~(1<<PD6);
 
 	// sensor deadtime
 	_delay_us(500);
