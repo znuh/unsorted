@@ -31,6 +31,41 @@ void dim(uint8_t id, uint8_t dst) {
 	}
 }
 
+void seed_prng(void) {
+	uint8_t i;
+	uint32_t seed=0;
+
+	// TODO: more noise!!!
+	
+	ADCSRA = (1<<ADEN);
+//	ADMUX = 0xe;
+	
+	for(i=0;i<32;i++) {
+		ADMUX = ((i&7)<<MUX0);
+		_delay_us(13);
+		ADCSRA |= (1<<ADSC);
+		while(ADCSRA & (1<<ADSC)) {}
+		seed <<= 1;
+		seed |= (ADC&1);
+	}
+
+	ADCSRA = 0;
+
+	/*
+	OCR2 = seed&0xff;
+	OCR1A = (seed>>8)&0xff;
+	OCR1B = (seed>>16)&0xff;
+	*/
+
+	srandom(seed);
+	
+	/*
+	PORTB=seed;
+	DDRB=0xff;
+	while(1);
+	*/
+}
+
 int main(void) {
 
 	// OC2, OC1B, OC1A
@@ -51,8 +86,10 @@ int main(void) {
 	TCCR1A = (1<<WGM10) | (1<<COM1A1) | (1<<COM1B1);
 	TCCR1B = (1<<CS10);
 
+	seed_prng();
+	
 	while(1) {
-		dim(rand()&3,rand()&0xff);
+		dim(random()&3,random()&0xff);
 	}
 
 	return 0;
