@@ -9,7 +9,11 @@ static uint8_t byte;
 
 static uint16_t etu;
 
-// TODOs: F_CPU fast enough? TX ringbuffer
+static volatile uint8_t rbuf[256];
+static uint8_t rb_put=0;
+static volatile uint8_t rb_fill=0;
+
+// TODOs: F_CPU fast enough? ringbuffer large enough? testing!
 
 ISR(TIMER1_COMPA_vect) {
 	TCNT1 = 0;
@@ -17,7 +21,9 @@ ISR(TIMER1_COMPA_vect) {
 	byte|=0x80;
 	if(bitcnt == 8) {
 		TIMSK &= ~(1<<OCIE1A);
-		UDR = byte;
+		//UDR = byte;
+		rbuf[rb_put++]=byte;
+		rb_fill++;
 		bitcnt = 0;
 		return;
 	}
@@ -35,7 +41,9 @@ ISR(TIMER1_CAPT_vect) {
 		// rising edge - add a zero
 		byte>>=1;
 		if(bitcnt == 8) {
-			UDR = byte;
+			//UDR = byte;
+			rbuf[rb_put++]=byte;
+			rb_fill++;
 			bitcnt = 0;
 			return;
 		}
@@ -53,6 +61,7 @@ ISR(TIMER1_CAPT_vect) {
 }
 
 int main(void) {
+	uint8_t rb_get=0;
 	
 	UBRRH=0;
 	UBRRL = 4; // 115.2 kBaud
@@ -68,7 +77,15 @@ int main(void) {
 	
 	sei();
 	
-	while(1) {}
+	while(1) {
+		loop_until_bit_is_set(UCSRA, UDRE);
+		cli();
+		if(rb_fill) {
+			rb_fill--;
+			UDR = rbuf[rb_get++];
+		}
+		sei();
+	}
 	
 	return 0;
 }
