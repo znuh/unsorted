@@ -1,17 +1,18 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#define F_CPU		3686400UL
+#define F_CPU		9216000UL
 #include <util/delay.h>
 #include <stdint.h>
 
-volatile static uint8_t bitcnt=0;
-volatile static uint8_t byte;
+static uint8_t bitcnt=0;
+static uint8_t byte;
 
-//static uint16_t etu;
+static uint16_t etu;
+
+// TODOs: F_CPU fast enough? TX ringbuffer
 
 ISR(TIMER1_COMPA_vect) {
 	TCNT1 = 0;
-	//TIMSK &= ~(1<<OCIE1A);
 	byte>>=1;
 	byte|=0x80;
 	if(bitcnt == 8) {
@@ -20,6 +21,7 @@ ISR(TIMER1_COMPA_vect) {
 		bitcnt = 0;
 		return;
 	}
+	OCR1A = etu;
 	bitcnt++;
 }
 
@@ -41,8 +43,9 @@ ISR(TIMER1_CAPT_vect) {
 	}
 	else {
 		// falling edge
-		// setup COMPA - TODO
-		
+		// setup COMPA - val is 3/16 of a bit
+		etu = (val*16)/3;
+		OCR1A = etu + etu/2;
 		TIFR = (1<<OCF1A);
 		TIMSK = (1<<OCIE1A);
 	}
@@ -52,7 +55,7 @@ ISR(TIMER1_CAPT_vect) {
 int main(void) {
 	
 	UBRRH=0;
-	UBRRL = 1; // 115.2 kBaud
+	UBRRL = 4; // 115.2 kBaud
 	
 	UCSRB = (1<<TXEN);
 	UCSRC = (1<<URSEL)|(3<<UCSZ0); // 8 bit, 1 stopbit
