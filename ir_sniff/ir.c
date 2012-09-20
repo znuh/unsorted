@@ -1,6 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#define F_CPU		9216000UL
+#define F_CPU		14745600UL
 #include <util/delay.h>
 #include <stdint.h>
 
@@ -10,8 +10,8 @@ static uint8_t byte;
 static uint16_t etu;
 
 static volatile uint8_t rbuf[256];
-static uint8_t rb_put=0;
 static volatile uint8_t rb_fill=0;
+static uint8_t rb_put=0;
 
 // TODOs: F_CPU fast enough? ringbuffer large enough? testing!
 
@@ -64,7 +64,7 @@ int main(void) {
 	uint8_t rb_get=0;
 	
 	UBRRH=0;
-	UBRRL = 4; // 115.2 kBaud
+	UBRRL = 7; // 115.2 kBaud
 	
 	UCSRB = (1<<TXEN);
 	UCSRC = (1<<URSEL)|(3<<UCSZ0); // 8 bit, 1 stopbit
