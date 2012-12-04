@@ -12,6 +12,8 @@
 #include <assert.h>
 
 #define SLAVE_ADDR		3
+#define TUN_CAP_VAL		6
+//#define OUTDOOR
 
 typedef struct as3935_s {
 	uint8_t pwd:1;
@@ -94,6 +96,32 @@ void dump_regs(int fd) {
 	print_regs((as3935_t*)regs);
 }
 
+int as3935_wreg(int fd, uint8_t reg, uint8_t val) {
+	uint8_t buf[2] = {reg, val};
+	return write(fd, buf, 2);
+}
+
+int as3935_rreg(int fd, uint8_t reg, uint8_t *val) {
+	int res = write(fd, &reg, 1);
+	assert(res == 1);
+	return read(fd, val, 1);
+}
+
+#define DIRECT_COMMAND	0x96
+
+int as3935_init(int fd) {
+	as3935_wreg(fd, 0x3c, DIRECT_COMMAND); // preset default
+	as3935_wreg(fd, 0x3d, DIRECT_COMMAND); // calib_rco
+	as3935_wreg(fd, 0x08, (1<<5));
+	usleep(3000);
+	as3935_wreg(fd, 0x08, 0);
+	as3935_wreg(fd, 0x08, TUN_CAP_VAL);
+#ifdef OUTDOOR
+	as3935_wreg(fd, 0, (14<<1));
+#endif
+	return 0;
+}
+
 int main(int argc, char **argv) {
 	int fd, res;
 	
@@ -102,6 +130,8 @@ int main(int argc, char **argv) {
 	assert(fd >= 0);
 	
 	assert(ioctl(fd, I2C_SLAVE, SLAVE_ADDR) >= 0);
+
+	as3935_init(fd);
 
 	dump_regs(fd);
 	
