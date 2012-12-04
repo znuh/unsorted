@@ -14,9 +14,9 @@
 #include <assert.h>
 
 #define SLAVE_ADDR		3
-#define TUN_CAP_VAL		6
+#define TUN_CAP_VAL		6	// 31204 Hz * 16 = 499264 Hz
 //#define OUTDOOR
-#define MASK_DISTURBER
+//#define MASK_DISTURBER
 
 typedef struct as3935_s {
 	uint8_t pwd:1;
@@ -116,7 +116,6 @@ int as3935_rreg(int fd, uint8_t reg, uint8_t *val) {
 #define DIRECT_COMMAND	0x96
 
 int as3935_init(int fd) {
-	uint8_t val;
 	
 	as3935_wreg(fd, 0x3c, DIRECT_COMMAND); // preset default
 	as3935_wreg(fd, 0x3d, DIRECT_COMMAND); // calib_rco
@@ -131,6 +130,7 @@ int as3935_init(int fd) {
 #endif
 
 #ifdef MASK_DISTURBER
+	uint8_t val;
 	as3935_rreg(fd, 3, &val);
 	val |= (1<<5);
 	as3935_wreg(fd, 3, val);
