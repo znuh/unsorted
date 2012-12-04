@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <stdio.h>
 #include <alloca.h>
 #include <assert.h>
@@ -14,6 +16,7 @@
 #define SLAVE_ADDR		3
 #define TUN_CAP_VAL		6
 //#define OUTDOOR
+#define MASK_DISTURBER
 
 typedef struct as3935_s {
 	uint8_t pwd:1;
@@ -82,7 +85,7 @@ void hexdump(const uint8_t *d, int l) {
 	printf("\n");
 }
 
-void dump_regs(int fd) {
+void dump_regs(int fd, as3935_t *buf) {
 	uint8_t regs[9] = {0};
 	int res;
 	
@@ -94,6 +97,9 @@ void dump_regs(int fd) {
 	
 	hexdump(regs,sizeof(regs));
 	print_regs((as3935_t*)regs);
+	
+	if(buf)
+		memcpy(buf, regs, sizeof(as3935_t));
 }
 
 int as3935_wreg(int fd, uint8_t reg, uint8_t val) {
@@ -110,15 +116,26 @@ int as3935_rreg(int fd, uint8_t reg, uint8_t *val) {
 #define DIRECT_COMMAND	0x96
 
 int as3935_init(int fd) {
+	uint8_t val;
+	
 	as3935_wreg(fd, 0x3c, DIRECT_COMMAND); // preset default
 	as3935_wreg(fd, 0x3d, DIRECT_COMMAND); // calib_rco
 	as3935_wreg(fd, 0x08, (1<<5));
 	usleep(3000);
 	as3935_wreg(fd, 0x08, 0);
+	
 	as3935_wreg(fd, 0x08, TUN_CAP_VAL);
+	
 #ifdef OUTDOOR
 	as3935_wreg(fd, 0, (14<<1));
 #endif
+
+#ifdef MASK_DISTURBER
+	as3935_rreg(fd, 3, &val);
+	val |= (1<<5);
+	as3935_wreg(fd, 3, val);
+#endif
+
 	return 0;
 }
 
@@ -133,7 +150,7 @@ int main(int argc, char **argv) {
 
 	as3935_init(fd);
 
-	dump_regs(fd);
+	dump_regs(fd, NULL);
 	
 	if(argc>2) {
 		uint8_t *wrbuf=alloca(argc-2);
@@ -146,7 +163,27 @@ int main(int argc, char **argv) {
 		printf("\n");
 		res = write(fd, wrbuf, argc-2);
 		assert(res == (argc-2));
-		dump_regs(fd);
+		dump_regs(fd, NULL);
+	}
+	else {
+		while(1) {
+			uint8_t ints;
+			usleep(10000);
+			as3935_rreg(fd, 3, &ints);
+			if(ints&7) {
+				as3935_t regs;
+				time_t now = time(NULL);
+#ifdef MASK_DISTURBER
+				if((ints&7) == 4) continue;
+#endif
+				printf("%s",ctime(&now));
+				if(ints&1) printf("noise level too high\n");
+				if(ints&4) printf("disturber detected\n");
+				if(ints&8) printf("lightning\n");
+				dump_regs(fd, &regs);
+			
+			} // ints
+		} // while(1)
 	}
 	
 	close(fd);
