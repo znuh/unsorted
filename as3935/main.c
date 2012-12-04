@@ -6,7 +6,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <alloca.h>
 #include <assert.h>
 
 #define SLAVE_ADDR		3
@@ -48,7 +50,7 @@ typedef struct as3935_s {
 	
 } as3935_t;
 
-void dump_regs(as3935_t *r) {
+void print_regs(as3935_t *r) {
 	printf("%12s: %d\n", "AFE_GB", r->afe_gb);
 	printf("%12s: %d\n", "PWD", r->pwd);
 	printf("%12s: %d\n", "NF_LEV", r->nf_lev);
@@ -78,8 +80,21 @@ void hexdump(const uint8_t *d, int l) {
 	printf("\n");
 }
 
+void dump_regs(int fd) {
+	uint8_t regs[9] = {0};
+	int res;
+	
+	res = write(fd, regs, 1);
+	assert(res == 1);
+
+	res = read(fd, regs, sizeof(regs));
+	assert(res == sizeof(regs));
+	
+	hexdump(regs,sizeof(regs));
+	print_regs((as3935_t*)regs);
+}
+
 int main(int argc, char **argv) {
-	uint8_t regs[9];
 	int fd, res;
 	
 	assert(argc>1);
@@ -87,16 +102,22 @@ int main(int argc, char **argv) {
 	assert(fd >= 0);
 	
 	assert(ioctl(fd, I2C_SLAVE, SLAVE_ADDR) >= 0);
+
+	dump_regs(fd);
 	
-	regs[0]=0;
-	res = write(fd, regs, 1);
-	assert(res == 1);
-	
-	res = read(fd, regs, sizeof(regs));
-	assert(res == sizeof(regs));
-	
-	hexdump(regs,sizeof(regs));
-	dump_regs((as3935_t*)regs);
+	if(argc>2) {
+		uint8_t *wrbuf=alloca(argc-2);
+		int i;
+		printf("write: ");
+		for(i=2;i<argc;i++) {
+			wrbuf[i-2]=strtoul(argv[i],NULL,0)&0xff;
+			printf("0x%02x ",wrbuf[i-2]);
+		}
+		printf("\n");
+		res = write(fd, wrbuf, argc-2);
+		assert(res == (argc-2));
+		dump_regs(fd);
+	}
 	
 	close(fd);
 	
