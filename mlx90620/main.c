@@ -119,9 +119,44 @@ int mlx_read_ram(int fd, uint8_t ofs, uint16_t *val, uint8_t n)
         return 0;
 }
 
+struct mlx_conv_s {
+	double v_th0;
+	double d_Kt1;
+	double d_Kt2;
+};
+
+double kelvin_to_celsius(double d) {
+	return d - 273.15;
+}
+
+double ptat_to_kelvin(int16_t ptat, struct mlx_conv_s *conv) {
+	double d = (conv->d_Kt1 * conv->d_Kt1 - 4 * conv->d_Kt2 * (1 - ptat / conv->v_th0));
+
+	return ((-conv->d_Kt1 +  sqrt(d)) / (2 * conv->d_Kt2)) + 25 + 273.15;
+}
+
+void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
+	uint8_t *Ai = eeprom;
+	uint8_t *Bi = eeprom+0x40;
+	uint8_t *da = eeprom+0x80;
+	
+	conv->v_th0 = ((int16_t*)(eeprom+0xda))[0];
+	
+	conv->d_Kt1 = ((int16_t*)(eeprom+0xdc))[0];
+	conv->d_Kt1 /= conv->v_th0;
+	conv->d_Kt1 /= (1<<10);
+	
+	conv->d_Kt2 = ((int16_t*)(eeprom+0xde))[0];
+	conv->d_Kt2 /= conv->v_th0;
+	conv->d_Kt2 /= (1<<20);
+	
+	
+}
+
 int main(int argc, char **argv) {
 	uint8_t eeprom[0xFF];
 	uint16_t ir_data[16][4];
+	struct mlx_conv_s conv_tbl;
 	double temp[16][4];
 	uint16_t cfg, ptat, trim;
 	int fd;
@@ -132,6 +167,15 @@ int main(int argc, char **argv) {
 	
 	read_eeprom(fd, eeprom);
 	hexdump(eeprom, 255);
+#if 0
+	eeprom[0xda]=0x78;
+	eeprom[0xdb]=0x1a;
+	eeprom[0xdc]=0x33;
+	eeprom[0xdd]=0x5b;
+	eeprom[0xde]=0xcc;
+	eeprom[0xdf]=0xed;
+#endif
+	prepare_conv(eeprom, &conv_tbl);
 	
 	assert(ioctl(fd, I2C_SLAVE, 0x60) >= 0);
 
@@ -146,8 +190,9 @@ int main(int argc, char **argv) {
 	printf("osc: %04x\n",trim);
 	
 	mlx_read_ram(fd, MLX_RAM_PTAT, &ptat, 1);
-	printf("ptat: %04x\n",ptat);
-	
+	//ptat=0x1ac0;
+	printf("ptat: %04x (%.1f)\n",ptat,kelvin_to_celsius(ptat_to_kelvin((int16_t)ptat,&conv_tbl)));
+
 	while(1) {
 		mlx_read_ram(fd, MLX_RAM_IR, (uint16_t *)ir_data, 16*4);
 		dump_ir(ir_data);
