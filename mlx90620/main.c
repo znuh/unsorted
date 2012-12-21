@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 	assert(fd >= 0);
 	
 	read_eeprom(fd, eeprom);
-	//hexdump(eeprom, 255);
+	hexdump(eeprom, 255);
 	
 	assert(ioctl(fd, I2C_SLAVE, 0x60) >= 0);
 
