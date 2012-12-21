@@ -130,6 +130,10 @@ struct mlx_conv_s {
 	double cyclops_B;
 	double Ke;
 	double KsTa;
+	
+	double Ai[16*4];
+	double Bi[16*4];
+	double alpha_i[16*4];
 };
 
 double kelvin_to_celsius(double d) {
@@ -151,6 +155,7 @@ void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
 	double d_alpha_scale;
 	double alpha_0;
 	double d_common_alpha;
+	int i;
 	
 	conv->v_th0 = ((int16_t*)(eeprom+0xda))[0];
 	
@@ -184,7 +189,13 @@ void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
 	alpha_0 = ((uint16_t*)eeprom+0xE0)[0];
 	d_common_alpha = (alpha_0 - (conv->tgc * conv->cyclops_alpha)) / alpha0_scale;
 	
-	
+	for(i=0;i<16*4;i++) {
+		conv->Ai[i]=Ai[i];
+		conv->Bi[i]=Bi[i];
+		conv->Bi[i] /= Bi_scale;
+		conv->alpha_i[i] = da[i];
+		conv->alpha_i[i] /= (d_alpha_scale + d_common_alpha);
+	}
 }
 
 int main(int argc, char **argv) {
