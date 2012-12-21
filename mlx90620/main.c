@@ -148,7 +148,7 @@ double kelvin_to_celsius(double d) {
 	return d - 273.15;
 }
 
-double ptat_to_kelvin(int16_t ptat, struct mlx_conv_s *conv) {
+double ptat_to_kelvin(double ptat, struct mlx_conv_s *conv) {
 	double d = (conv->d_Kt1 * conv->d_Kt1 - 4 * conv->d_Kt2 * (1 - ptat / conv->v_th0));
 
 	return ((-conv->d_Kt1 +  sqrt(d)) / (2 * conv->d_Kt2)) + 25 + 273.15;
@@ -203,7 +203,7 @@ void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
 		conv->Bi[i] /= Bi_scale;
 		conv->alpha_i[i] = da[i];
 		conv->alpha_i[i] /= d_alpha_scale;
-		conv->alpha_i[i] += 0.0001;//d_common_alpha;
+		conv->alpha_i[i] += d_common_alpha;
 		printf("xx %f %f %f %f %f\n",conv->Ai[i],conv->Bi[i],conv->alpha_i[i],d_alpha_scale,d_common_alpha);
 	}
 }
@@ -269,20 +269,18 @@ int main(int argc, char **argv) {
 	printf("osc: %04x\n",trim);
 
 	while(1) {
-		//usleep(100000);
-		//system("clear");
 		mlx_read_ram(fd, MLX_RAM_TGC, (uint16_t *) &tgc, 1);
 		printf("tgc: %04x\n",(uint16_t)tgc);
 
 		mlx_read_ram(fd, MLX_RAM_PTAT, &ptat, 1);
-		ptat_f = kelvin_to_celsius(ptat_to_kelvin((int16_t)ptat,&conv_tbl));
+		ptat_f = kelvin_to_celsius(ptat_to_kelvin(ptat,&conv_tbl));
 		//ptat=0x1ac0;
 		printf("ptat: %04x (%.1f)\n",ptat,ptat_f);
 			
 		mlx_read_ram(fd, MLX_RAM_IR, (uint16_t *)ir_data, 16*4);
 		dump_ir(ir_data);
-		//convert_ir(ir_data, temp, &conv_tbl, ptat_f, tgc);
-		//dump_temps(temp);
+		convert_ir(ir_data, temp, &conv_tbl, ptat_f, tgc);
+		dump_temps(temp);
 	}
 	
 	close(fd);
