@@ -123,6 +123,13 @@ struct mlx_conv_s {
 	double v_th0;
 	double d_Kt1;
 	double d_Kt2;
+	
+	double tgc;
+	double cyclops_alpha;
+	double cyclops_A;
+	double cyclops_B;
+	double Ke;
+	double KsTa;
 };
 
 double kelvin_to_celsius(double d) {
@@ -139,6 +146,11 @@ void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
 	uint8_t *Ai = eeprom;
 	uint8_t *Bi = eeprom+0x40;
 	uint8_t *da = eeprom+0x80;
+	double Bi_scale;
+	double alpha0_scale;
+	double d_alpha_scale;
+	double alpha_0;
+	double d_common_alpha;
 	
 	conv->v_th0 = ((int16_t*)(eeprom+0xda))[0];
 	
@@ -149,6 +161,28 @@ void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
 	conv->d_Kt2 = ((int16_t*)(eeprom+0xde))[0];
 	conv->d_Kt2 /= conv->v_th0;
 	conv->d_Kt2 /= (1<<20);
+	
+	conv->tgc = ((int8_t *)eeprom+0xd8)[0];
+	conv->tgc /= 32.0;
+	
+	conv->cyclops_alpha = ((uint16_t*)(eeprom+0xd6))[0];
+	Bi_scale = pow(2, eeprom[0xD9]);
+	
+	conv->cyclops_A = ((int8_t*)eeprom)[0xd4];
+	conv->cyclops_B = ((int8_t*)eeprom)[0xd5];
+	conv->cyclops_B /= Bi_scale;
+	
+	alpha0_scale = pow(2, eeprom[0xe2]);
+	d_alpha_scale = pow(2, eeprom[0xe3]);
+	
+	conv->Ke = ((uint16_t*)eeprom+0xE4)[0];
+	conv->Ke /= 32768.0;
+	
+	conv->KsTa = ((int16_t*)eeprom+0xE6)[0];
+	conv->KsTa /= pow(2, 20);
+	
+	alpha_0 = ((uint16_t*)eeprom+0xE0)[0];
+	d_common_alpha = (alpha_0 - (conv->tgc * conv->cyclops_alpha)) / alpha0_scale;
 	
 	
 }
