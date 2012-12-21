@@ -31,27 +31,34 @@ void hexdump(uint8_t *d, int l) {
 	printf("\n");
 }
 
-void dump_ir(uint16_t ir_data[16][4]) {
+void dump_ir(int16_t ir_data[16][4]) {
 	int x,y;
 	for(y=0;y<4;y++) {
 		for(x=0;x<16;x++) {
-			printf("%04x ", ir_data[x][y]);
+			printf("%04x ", (uint16_t)ir_data[x][y]);
 		}
 		printf("\n");
 	}
 	printf("\n");
 }
 
-void convert_ir(uint16_t ir_data[16][4], double temp[16][4], uint8_t *eeprom, uint16_t ptat) {
-	
+void dump_temps(double temps[16][4]) {
+	int x,y;
+	for(y=0;y<4;y++) {
+		for(x=0;x<16;x++) {
+			printf("%3.1f ", temps[x][y]);
+		}
+		printf("\n");
+	}
+	printf("\n");
 }
 
 // 10: init
 // 23: eeprom map
 // 29: commands
 
-#define CFG_LSB	8 //0x0e //0x08u
-#define CFG_MSB	4 //0x74 //0x04u
+#define CFG_LSB	0x0au //0x0e //0x08u
+#define CFG_MSB	0x74u //0x04u
 
 int config_mlx(int fd, uint8_t *eeprom) {
 	uint8_t buf[16];
@@ -78,12 +85,12 @@ int config_mlx(int fd, uint8_t *eeprom) {
 }
 
 enum {
-	MLX_RAM_IR = 0,
-	MLX_RAM_IR_END = 0x3f,
-	MLX_RAM_PTAT = 0x90,
-	MLX_RAM_TGC = 0x91,
-	MLX_RAM_CONFIG = 0x92,
-	MLX_RAM_TRIM = 0x93
+	MLX_RAM_IR 		= 0x00,
+	MLX_RAM_IR_END 	= 0x3f,
+	MLX_RAM_PTAT 	= 0x90,
+	MLX_RAM_TGC 	= 0x91,
+	MLX_RAM_CONFIG 	= 0x92,
+	MLX_RAM_TRIM 	= 0x93
 };
 
 int mlx_read_ram(int fd, uint8_t ofs, uint16_t *val, uint8_t n)
@@ -94,6 +101,7 @@ int mlx_read_ram(int fd, uint8_t ofs, uint16_t *val, uint8_t n)
         uint8_t cmd[] = {2, 0xFF, 0, 1};
         
         cmd[1] = ofs;
+        cmd[2] = (n > 1) ? 1 : 0;
         cmd[3] = n;
         
         i2c_data.msgs = msg;
@@ -147,8 +155,8 @@ double ptat_to_kelvin(int16_t ptat, struct mlx_conv_s *conv) {
 }
 
 void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
-	uint8_t *Ai = eeprom;
-	uint8_t *Bi = eeprom+0x40;
+	int8_t *Ai = (int8_t*)eeprom;
+	int8_t *Bi = (int8_t*)eeprom+0x40;
 	uint8_t *da = eeprom+0x80;
 	double Bi_scale;
 	double alpha0_scale;
@@ -194,16 +202,42 @@ void prepare_conv(uint8_t *eeprom, struct mlx_conv_s *conv) {
 		conv->Bi[i]=Bi[i];
 		conv->Bi[i] /= Bi_scale;
 		conv->alpha_i[i] = da[i];
-		conv->alpha_i[i] /= (d_alpha_scale + d_common_alpha);
+		conv->alpha_i[i] /= d_alpha_scale;
+		conv->alpha_i[i] += 0.0001;//d_common_alpha;
+		printf("xx %f %f %f %f %f\n",conv->Ai[i],conv->Bi[i],conv->alpha_i[i],d_alpha_scale,d_common_alpha);
+	}
+}
+
+void convert_ir(int16_t ir_data[16][4], double temp[16][4], struct mlx_conv_s *conv, double ptat, int16_t tgc) {
+	double cyclops_val = conv->tgc * ((double)tgc - (conv->cyclops_A + conv->cyclops_B * (kelvin_to_celsius(ptat) - 25)));
+	int i, x, y;
+	double ta_corr = pow(ptat,4);
+	
+	for(x=0,i=0;x<16;x++) {
+		for(y=0;y<4;y++,i++) {
+			double v_in = ir_data[x][y];
+			//printf("%f\n",v_in);
+			printf("%f %f %f\n",conv->Ai[i], conv->Bi[i], conv->alpha_i[i]);
+			//printf("%f\n",(1 + conv->KsTa * (kelvin_to_celsius(ptat) - 35)));
+			//printf("%f\n",conv->Ai[i] + conv->Bi[i] * (kelvin_to_celsius(ptat)));
+			//printf("%f %f\n",conv->Ke ,conv->alpha_i[i]);
+						//(1 + conv->KsTa * (kelvin_to_celsius(ptat) - 35))));
+			double v = (v_in - (conv->Ai[i] + conv->Bi[i] * (kelvin_to_celsius(ptat) - 25))
+						- cyclops_val) / (conv->Ke * conv->alpha_i[i] * 
+						(1 + conv->KsTa * (kelvin_to_celsius(ptat) - 35))) + ta_corr;
+					temp[x][y]=pow(v,0.25);
+		}
 	}
 }
 
 int main(int argc, char **argv) {
 	uint8_t eeprom[0xFF];
-	uint16_t ir_data[16][4];
+	int16_t ir_data[16][4];
 	struct mlx_conv_s conv_tbl;
 	double temp[16][4];
 	uint16_t cfg, ptat, trim;
+	int16_t tgc;
+	double ptat_f;
 	int fd;
 	
 	assert(argc>1);
@@ -233,15 +267,22 @@ int main(int argc, char **argv) {
 	
 	mlx_read_ram(fd, MLX_RAM_TRIM, &trim, 1);
 	printf("osc: %04x\n",trim);
-	
-	mlx_read_ram(fd, MLX_RAM_PTAT, &ptat, 1);
-	//ptat=0x1ac0;
-	printf("ptat: %04x (%.1f)\n",ptat,kelvin_to_celsius(ptat_to_kelvin((int16_t)ptat,&conv_tbl)));
 
 	while(1) {
+		//usleep(100000);
+		//system("clear");
+		mlx_read_ram(fd, MLX_RAM_TGC, (uint16_t *) &tgc, 1);
+		printf("tgc: %04x\n",(uint16_t)tgc);
+
+		mlx_read_ram(fd, MLX_RAM_PTAT, &ptat, 1);
+		ptat_f = kelvin_to_celsius(ptat_to_kelvin((int16_t)ptat,&conv_tbl));
+		//ptat=0x1ac0;
+		printf("ptat: %04x (%.1f)\n",ptat,ptat_f);
+			
 		mlx_read_ram(fd, MLX_RAM_IR, (uint16_t *)ir_data, 16*4);
 		dump_ir(ir_data);
-		convert_ir(ir_data, temp, eeprom, ptat);
+		//convert_ir(ir_data, temp, &conv_tbl, ptat_f, tgc);
+		//dump_temps(temp);
 	}
 	
 	close(fd);
