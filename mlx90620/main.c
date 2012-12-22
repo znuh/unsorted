@@ -65,11 +65,11 @@ Uint32 color_from_temp(double t, double maxval, double minval)
 	return res;
 }
 
-void draw_picture(SDL_Surface * sf, double temps[16][4])
+void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 {
 	int x, y;
 	double maxval = -999999999, minval = 999999999;
-	char buf[16];
+	char buf[32];
 	SDL_Color fg = { 0, 0, 0 };
 	SDL_Rect rect;
 	SDL_Surface *txt_sf;
@@ -123,6 +123,15 @@ void draw_picture(SDL_Surface * sf, double temps[16][4])
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
 
+	sprintf(buf, "T_ambient: %2.1f %cC", t_amb,0xb0);
+	txt_sf = TTF_RenderText_Blended(font, buf, fg);
+	rect.w = txt_sf->w;
+	rect.h = txt_sf->h;
+	rect.x = 80 + 256 + 10+460;
+	rect.y = 4 * PIX_SIZE + 30;
+	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
+	SDL_FreeSurface(txt_sf);
+
 	SDL_Flip(sf);
 
 }
@@ -171,12 +180,10 @@ void dump_temps(double temps[16][4])
 	printf("\n");
 }
 
-// 10: init
-// 23: eeprom map
-// 29: commands
+//#define CFG_LSB	0x0au	// 16Hz
+#define CFG_LSB	0x0bu	//  8Hz
 
-#define CFG_LSB	0x0au		//0x0e //0x08u
-#define CFG_MSB	0x74u		//0x04u
+#define CFG_MSB	0x74u
 
 int config_mlx(int fd, uint8_t * eeprom)
 {
@@ -480,7 +487,7 @@ int main(int argc, char **argv)
 		dump_ir(ir_data);
 		dump_temps(temp);
 #endif
-		draw_picture(screen, temp);
+		draw_picture(screen, temp, kelvin_to_celsius(ptat_f));
 		while (SDL_PollEvent(&evt)) {
 			if (evt.type == SDL_KEYDOWN) {
 				switch (evt.key.keysym.sym) {
