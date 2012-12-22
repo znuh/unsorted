@@ -82,13 +82,18 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 				minval = temps[x][y];
 		}
 	}
+	if((maxval - minval) < 20) {
+		int diff = maxval - minval;
+		diff = 20 - diff;
+		maxval += diff;
+	}
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
 			boxColor(sf, x * PIX_SIZE, y * PIX_SIZE,
 				 x * PIX_SIZE + PIX_SIZE - 1,
 				 y * PIX_SIZE + PIX_SIZE - 1,
-				 color_from_temp(temps[x][y], maxval, minval));
-			sprintf(buf, "%3.1f", temps[x][y]);
+				 color_from_temp(temps[15-x][y], maxval, minval));
+			sprintf(buf, "%3.1f", temps[15-x][y]);
 			txt_sf = TTF_RenderText_Blended(font, buf, fg);
 			rect.w = txt_sf->w;
 			rect.h = txt_sf->h;
