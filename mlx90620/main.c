@@ -17,6 +17,8 @@
 #include <SDL/SDL_gfxPrimitives.h>
 #include <SDL/SDL_ttf.h>
 
+//#define DEBUG
+
 #define PIX_SIZE	64
 
 static TTF_Font *font = NULL;
@@ -27,7 +29,7 @@ SDL_Surface *sdl_init(void)
 	Uint32 videoflags;
 	SDL_Surface *screen;
 	int w = PIX_SIZE * 16, h = PIX_SIZE * 5;
-	    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		fprintf(stderr, "can't initialize SDL video\n");
 		exit(1);
 	}
@@ -52,73 +54,75 @@ SDL_Surface *sdl_init(void)
 	return screen;
 }
 
-Uint32 color_from_temp(double t, double maxval, double minval) {
-	Uint32 res=0x000080ff;
+Uint32 color_from_temp(double t, double maxval, double minval)
+{
+	Uint32 res = 0x000080ff;
 	double f = maxval - minval;
-	f = 256/f;
-	t-=minval;
-	res |= ((int)(t*f)&0xff)<<24;
-	res |= ((int)(t*f)&0xff)<<16;
+	f = 255 / f;
+	t -= minval;
+	res |= ((int)(t * f) & 0xff) << 24;
+	res |= ((int)(t * f) & 0xff) << 16;
 	return res;
 }
 
 void draw_picture(SDL_Surface * sf, double temps[16][4])
 {
 	int x, y;
-	double maxval=-999999999, minval=999999999;
+	double maxval = -999999999, minval = 999999999;
 	char buf[16];
 	SDL_Color fg = { 0, 0, 0 };
 	SDL_Rect rect;
 	SDL_Surface *txt_sf;
-	SDL_FillRect(sf,NULL, 0);
+	SDL_FillRect(sf, NULL, 0);
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
-			if(temps[x][y]>maxval)
+			if (temps[x][y] > maxval)
 				maxval = temps[x][y];
-			if(temps[x][y]<minval)
+			if (temps[x][y] < minval)
 				minval = temps[x][y];
 		}
 	}
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
 			boxColor(sf, x * PIX_SIZE, y * PIX_SIZE,
-				       x * PIX_SIZE + PIX_SIZE - 1,
-				       y * PIX_SIZE + PIX_SIZE - 1,
-				       color_from_temp(temps[x][y],maxval,minval));
-			sprintf(buf,"%3.1f",temps[x][y]);
+				 x * PIX_SIZE + PIX_SIZE - 1,
+				 y * PIX_SIZE + PIX_SIZE - 1,
+				 color_from_temp(temps[x][y], maxval, minval));
+			sprintf(buf, "%3.1f", temps[x][y]);
 			txt_sf = TTF_RenderText_Blended(font, buf, fg);
-			rect.w=txt_sf->w;
-			rect.h=txt_sf->h;
-			rect.x=x*PIX_SIZE+10;
-			rect.y=y*PIX_SIZE+20;
-			SDL_BlitSurface(txt_sf,NULL,sf,&rect);
+			rect.w = txt_sf->w;
+			rect.h = txt_sf->h;
+			rect.x = x * PIX_SIZE + 10;
+			rect.y = y * PIX_SIZE + 20;
+			SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 			SDL_FreeSurface(txt_sf);
 		}
 	}
-	for(x=0;x<256;x++) {
-		vlineColor(sf,x+80,PIX_SIZE*4,PIX_SIZE*4+PIX_SIZE, 0x80ff + (x<<16) + (x<<24));
+	for (x = 0; x < 256; x++) {
+		vlineColor(sf, x + 80, PIX_SIZE * 4, PIX_SIZE * 4 + PIX_SIZE,
+			   0x80ff + (x << 16) + (x << 24));
 	}
-	
+
 	fg.r = fg.g = fg.b = 0xff;
-	
-	sprintf(buf,"%3.1f",minval);
+
+	sprintf(buf, "%3.1f", minval);
 	txt_sf = TTF_RenderText_Blended(font, buf, fg);
-	rect.w=txt_sf->w;
-	rect.h=txt_sf->h;
-	rect.x=10;
-	rect.y=4*PIX_SIZE+30;
-	SDL_BlitSurface(txt_sf,NULL,sf,&rect);
+	rect.w = txt_sf->w;
+	rect.h = txt_sf->h;
+	rect.x = 10;
+	rect.y = 4 * PIX_SIZE + 30;
+	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
-	
-	sprintf(buf,"%3.1f",maxval);
+
+	sprintf(buf, "%3.1f", maxval);
 	txt_sf = TTF_RenderText_Blended(font, buf, fg);
-	rect.w=txt_sf->w;
-	rect.h=txt_sf->h;
-	rect.x=80+256+10;
-	rect.y=4*PIX_SIZE+30;
-	SDL_BlitSurface(txt_sf,NULL,sf,&rect);
+	rect.w = txt_sf->w;
+	rect.h = txt_sf->h;
+	rect.x = 80 + 256 + 10;
+	rect.y = 4 * PIX_SIZE + 30;
+	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
-	
+
 	SDL_Flip(sf);
 
 }
@@ -160,7 +164,6 @@ void dump_temps(double temps[16][4])
 	int x, y;
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
-			//temps[x][y]=y*16+x;
 			printf("%3.1f ", temps[x][y]);
 		}
 		printf("\n");
@@ -185,7 +188,9 @@ int config_mlx(int fd, uint8_t * eeprom)
 	buf[2] = eeprom[0xF7];
 	buf[3] = (0u - 0xAAu) & 0xff;
 	buf[4] = 0u;
+#ifdef DEBUG
 	hexdump(buf, 5);
+#endif
 	assert(write(fd, buf, 5) == 5);
 
 	// Write the configuration value (IO address 0x92) (see 8.2.2.1, 9.4.3)
@@ -194,7 +199,9 @@ int config_mlx(int fd, uint8_t * eeprom)
 	buf[2] = CFG_LSB;
 	buf[3] = (CFG_MSB - 0x55u) & 0xff;	// MSB
 	buf[4] = CFG_MSB;
+#ifdef DEBUG
 	hexdump(buf, 5);
+#endif
 	assert(write(fd, buf, 5) == 5);
 
 	return 0;
@@ -309,13 +316,13 @@ void prepare_conv(uint8_t * eeprom, struct mlx_conv_s *conv)
 	alpha0_scale = pow(2, eeprom[0xe2]);
 	d_alpha_scale = pow(2, eeprom[0xe3]);
 
-	conv->Ke = ((uint16_t *) eeprom + 0xE4)[0];
+	conv->Ke = ((uint16_t *) (eeprom + 0xE4))[0];
 	conv->Ke /= 32768.0;
 
-	conv->KsTa = ((int16_t *) eeprom + 0xE6)[0];
+	conv->KsTa = ((int16_t *) (eeprom + 0xE6))[0];
 	conv->KsTa /= pow(2, 20);
 
-	alpha_0 = ((uint16_t *) eeprom + 0xE0)[0];
+	alpha_0 = ((uint16_t *) (eeprom + 0xE0))[0];
 	d_common_alpha =
 	    (alpha_0 - (conv->tgc * conv->cyclops_alpha)) / alpha0_scale;
 
@@ -326,50 +333,62 @@ void prepare_conv(uint8_t * eeprom, struct mlx_conv_s *conv)
 		conv->alpha_i[i] = da[i];
 		conv->alpha_i[i] /= d_alpha_scale;
 		conv->alpha_i[i] += d_common_alpha;
-		printf("xx %f %f %f %f %f\n", conv->Ai[i], conv->Bi[i],
-		       conv->alpha_i[i], d_alpha_scale, d_common_alpha);
+#ifdef DEBUG
+		printf("xx %f %f %10.10f %.10f %.10f\n", conv->Ai[i],
+		       conv->Bi[i], conv->alpha_i[i], d_alpha_scale,
+		       d_common_alpha);
+#endif
 	}
 }
 
 void convert_ir(int16_t ir_data[16][4], double temp[16][4],
-		struct mlx_conv_s *conv, double ptat, int16_t tgc)
+		struct mlx_conv_s *conv, double ptat, double v_cp)
 {
-	double cyclops_val =
-	    conv->tgc * ((double)tgc -
-			 (conv->cyclops_A +
-			  conv->cyclops_B * (kelvin_to_celsius(ptat) - 25)));
+	double v_cp_off_comp =
+	    v_cp - (conv->cyclops_A +
+		    conv->cyclops_B * (kelvin_to_celsius(ptat) - 25));
+	double cyclops_val = conv->tgc * v_cp_off_comp;
 	int i, x, y;
 	double ta_corr = pow(ptat, 4);
+
+#ifdef DEBUG
+	printf("ptat %f %f\n", kelvin_to_celsius(ptat) - 25, ptat);
+	printf
+	    ("v_cp_off_comp: %.10f v_cp %.10f A_cp %.10f B_cp %.10f\n",
+	     v_cp_off_comp, v_cp, conv->cyclops_A, conv->cyclops_B);
+#endif
 
 	for (x = 0, i = 0; x < 16; x++) {
 		for (y = 0; y < 4; y++, i++) {
 			double v_in = ir_data[x][y];
-			//printf("%f\n",v_in);
-			printf("%f %f %f\n", conv->Ai[i], conv->Bi[i],
+			double v_ir_off_comp =
+			    v_in - (conv->Ai[i] +
+				    conv->Bi[i] *
+				    (kelvin_to_celsius(ptat) - 25));
+			double v_ir_tgc_comp = v_ir_off_comp - cyclops_val;
+			double v_ir_compensated = v_ir_tgc_comp / conv->Ke;
+			double t_o =
+			    sqrt(sqrt
+				 (v_ir_compensated / conv->alpha_i[i] +
+				  ta_corr)) - 273.15;
+#ifdef DEBUG
+			printf("Ai %f Bi %f alpha_i %f\n", conv->Ai[i],
+			       conv->Bi[i], conv->alpha_i[i]);
+			printf("cyclops_val: %.10f\n", cyclops_val);
+			printf("ta_corr: %.10f\n", ta_corr);
+			printf("v_ir_off_comp: %.10f\n", v_ir_off_comp);
+			printf("v_ir_tgc_comp: %.10f\n", v_ir_tgc_comp);
+			printf("v_ir_compensated: %.10f Ke: %.10f\n",
+			       v_ir_compensated, conv->Ke);
+			printf("to: %.10f alpha_i %.10f\n", t_o,
 			       conv->alpha_i[i]);
-			//printf("%f\n",(1 + conv->KsTa * (kelvin_to_celsius(ptat) - 35)));
-			//printf("%f\n",conv->Ai[i] + conv->Bi[i] * (kelvin_to_celsius(ptat)));
-			//printf("%f %f\n",conv->Ke ,conv->alpha_i[i]);
-			//(1 + conv->KsTa * (kelvin_to_celsius(ptat) - 35))));
-			double v =
-			    (v_in -
-			     (conv->Ai[i] +
-			      conv->Bi[i] * (kelvin_to_celsius(ptat) - 25))
-			     -
-			     cyclops_val) / (conv->Ke * conv->alpha_i[i] * (1 +
-									    conv->
-									    KsTa
-									    *
-									    (kelvin_to_celsius
-									     (ptat)
-									     -
-									     35)))
-			    + ta_corr;
-			temp[x][y] = pow(v, 0.25);
-			temp[x][y] = ir_data[x][y];
-		}
-	}
+#endif
+			temp[x][y] = t_o;
+		}		// y
+	}			// x
 }
+
+//#define TEST
 
 int main(int argc, char **argv)
 {
@@ -378,10 +397,13 @@ int main(int argc, char **argv)
 	struct mlx_conv_s conv_tbl;
 	double temp[16][4];
 	uint16_t cfg, ptat, trim;
-	int16_t tgc;
+	int16_t v_cp;
 	double ptat_f;
 	SDL_Surface *screen;
 	int fd;
+#ifdef TEST
+	int i;
+#endif
 	int quit = 0;
 
 	assert(argc > 1);
@@ -390,13 +412,30 @@ int main(int argc, char **argv)
 
 	read_eeprom(fd, eeprom);
 	hexdump(eeprom, 255);
-#if 0
+#ifdef TEST
 	eeprom[0xda] = 0x78;
 	eeprom[0xdb] = 0x1a;
 	eeprom[0xdc] = 0x33;
 	eeprom[0xdd] = 0x5b;
 	eeprom[0xde] = 0xcc;
 	eeprom[0xdf] = 0xed;
+	eeprom[0xd4] = 0xd0;
+	eeprom[0xd5] = 0xca;
+	eeprom[0xd6] = 0x00;
+	eeprom[0xd7] = 0x00;
+	eeprom[0xd8] = 0x23;
+	eeprom[0xd9] = 0x08;
+	eeprom[0xe0] = 0xe4;
+	eeprom[0xe1] = 0xd5;
+	eeprom[0xe2] = 0x2a;
+	eeprom[0xe3] = 0x21;
+	eeprom[0xe4] = 0x99;
+	eeprom[0xe5] = 0x79;
+	for (i = 0; i < 64; i++) {
+		eeprom[i] = 0xd6;
+		eeprom[i + 64] = 0xc1;
+		eeprom[i + 128] = 0x8f;
+	}
 #endif
 	prepare_conv(eeprom, &conv_tbl);
 
@@ -406,28 +445,41 @@ int main(int argc, char **argv)
 		config_mlx(fd, eeprom);
 
 		mlx_read_ram(fd, MLX_RAM_CONFIG, &cfg, 1);
+#ifdef DEBUG
 		printf("cfg: %04x\n", cfg);
+#endif
 	} while (!(cfg & (1 << 10)));
 
 	mlx_read_ram(fd, MLX_RAM_TRIM, &trim, 1);
+#ifdef DEBUG
 	printf("osc: %04x\n", trim);
+#endif
 
 	screen = sdl_init();
 
 	while (!quit) {
 		SDL_Event evt;
-		mlx_read_ram(fd, MLX_RAM_TGC, (uint16_t *) & tgc, 1);
-		printf("tgc: %04x\n", (uint16_t) tgc);
+		mlx_read_ram(fd, MLX_RAM_TGC, (uint16_t *) & v_cp, 1);
+#ifdef DEBUG
+		printf("tgc: %04x\n", (uint16_t) v_cp);
+#endif
 
 		mlx_read_ram(fd, MLX_RAM_PTAT, &ptat, 1);
-		ptat_f = kelvin_to_celsius(ptat_to_kelvin(ptat, &conv_tbl));
-		//ptat=0x1ac0;
-		printf("ptat: %04x (%.1f)\n", ptat, ptat_f);
-
+		ptat_f = ptat_to_kelvin(ptat, &conv_tbl);
+#ifdef DEBUG
+		printf("ptat: %04x (%.1f)\n", ptat, kelvin_to_celsius(ptat_f));
+#endif
 		mlx_read_ram(fd, MLX_RAM_IR, (uint16_t *) ir_data, 16 * 4);
+#ifdef TEST
+		v_cp = 0xffd8;
+		ptat_f = 28.16 + 273.15;
+		ir_data[0][0] = 0x0090;
+#endif
+		convert_ir(ir_data, temp, &conv_tbl, ptat_f, v_cp);
+#ifdef DEBUG
 		dump_ir(ir_data);
-		convert_ir(ir_data, temp, &conv_tbl, ptat_f, tgc);
 		dump_temps(temp);
+#endif
 		draw_picture(screen, temp);
 		while (SDL_PollEvent(&evt)) {
 			if (evt.type == SDL_KEYDOWN) {
@@ -437,7 +489,7 @@ int main(int argc, char **argv)
 					quit = 1;
 					break;
 				default:
-				break;
+					break;
 				}
 			}
 
