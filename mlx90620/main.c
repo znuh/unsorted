@@ -92,8 +92,8 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 			boxColor(sf, x * PIX_SIZE, y * PIX_SIZE,
 				 x * PIX_SIZE + PIX_SIZE - 1,
 				 y * PIX_SIZE + PIX_SIZE - 1,
-				 color_from_temp(temps[15-x][y], maxval, minval));
-			sprintf(buf, "%3.1f", temps[15-x][y]);
+				 color_from_temp(temps[x][3-y], maxval, minval));
+			sprintf(buf, "%3.1f", temps[x][3-y]);
 			txt_sf = TTF_RenderText_Blended(font, buf, fg);
 			rect.w = txt_sf->w;
 			rect.h = txt_sf->h;
@@ -127,7 +127,7 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	rect.y = 4 * PIX_SIZE + 30;
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
-
+/*
 	sprintf(buf, "ambient: %2.1f %cC", t_amb,0xb0);
 	txt_sf = TTF_RenderText_Blended(font, buf, fg);
 	rect.w = txt_sf->w;
@@ -136,7 +136,7 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	rect.y = 4 * PIX_SIZE + 30;
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
-
+*/
 	SDL_Flip(sf);
 
 }
