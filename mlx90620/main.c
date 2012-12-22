@@ -123,11 +123,11 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
 
-	sprintf(buf, "T_ambient: %2.1f %cC", t_amb,0xb0);
+	sprintf(buf, "ambient: %2.1f %cC", t_amb,0xb0);
 	txt_sf = TTF_RenderText_Blended(font, buf, fg);
 	rect.w = txt_sf->w;
 	rect.h = txt_sf->h;
-	rect.x = 80 + 256 + 10+460;
+	rect.x = 80 + 256 + 10+480;
 	rect.y = 4 * PIX_SIZE + 30;
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
