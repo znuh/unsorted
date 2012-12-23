@@ -85,7 +85,7 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	if((maxval - minval) < 20) {
 		int diff = maxval - minval;
 		diff = 20 - diff;
-		maxval += diff;
+		//maxval += diff;
 	}
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
