@@ -68,7 +68,7 @@ Uint32 color_from_temp(double t, double maxval, double minval)
 void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 {
 	int x, y;
-	double maxval = -999999999, minval = 999999999;
+	double maxval = -INFINITY, minval = INFINITY;
 	char buf[32];
 	SDL_Color fg_black = { 0, 0, 0 };
 	SDL_Color fg_white = { 255, 255, 255 };
@@ -130,16 +130,7 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	rect.y = 4 * PIX_SIZE + 30;
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
-/*
-	sprintf(buf, "ambient: %2.1f %cC", t_amb,0xb0);
-	txt_sf = TTF_RenderText_Blended(font, buf, fg);
-	rect.w = txt_sf->w;
-	rect.h = txt_sf->h;
-	rect.x = 80 + 256 + 10+480;
-	rect.y = 4 * PIX_SIZE + 30;
-	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
-	SDL_FreeSurface(txt_sf);
-*/
+
 	SDL_Flip(sf);
 
 }
