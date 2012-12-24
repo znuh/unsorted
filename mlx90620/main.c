@@ -70,7 +70,8 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	int x, y;
 	double maxval = -999999999, minval = 999999999;
 	char buf[32];
-	SDL_Color fg = { 0, 0, 0 };
+	SDL_Color fg_black = { 0, 0, 0 };
+	SDL_Color fg_white = { 255, 255, 255 };
 	SDL_Rect rect;
 	SDL_Surface *txt_sf;
 	SDL_FillRect(sf, NULL, 0);
@@ -82,19 +83,23 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 				minval = temps[x][y];
 		}
 	}
-	if((maxval - minval) < 20) {
+	if ((maxval - minval) < 20) {
 		int diff = maxval - minval;
 		diff = 20 - diff;
 		//maxval += diff;
 	}
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
+			Uint32 col =
+			    color_from_temp(temps[x][3 - y], maxval, minval);
 			boxColor(sf, x * PIX_SIZE, y * PIX_SIZE,
 				 x * PIX_SIZE + PIX_SIZE - 1,
-				 y * PIX_SIZE + PIX_SIZE - 1,
-				 color_from_temp(temps[x][3-y], maxval, minval));
-			sprintf(buf, "%3.1f", temps[x][3-y]);
-			txt_sf = TTF_RenderText_Blended(font, buf, fg);
+				 y * PIX_SIZE + PIX_SIZE - 1, col);
+			sprintf(buf, "%3.1f", temps[x][3 - y]);
+			txt_sf =
+			    TTF_RenderText_Blended(font, buf,
+						   (col >> 24) <
+						   150 ? fg_white : fg_black);
 			rect.w = txt_sf->w;
 			rect.h = txt_sf->h;
 			rect.x = x * PIX_SIZE + 10;
@@ -108,10 +113,8 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 			   0x80ff + (x << 16) + (x << 24));
 	}
 
-	fg.r = fg.g = fg.b = 0xff;
-
-	sprintf(buf, "%3.1f", minval);
-	txt_sf = TTF_RenderText_Blended(font, buf, fg);
+	sprintf(buf, "%3.1f%cC", minval, 0xb0);
+	txt_sf = TTF_RenderText_Blended(font, buf, fg_white);
 	rect.w = txt_sf->w;
 	rect.h = txt_sf->h;
 	rect.x = 10;
@@ -119,8 +122,8 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
 
-	sprintf(buf, "%3.1f", maxval);
-	txt_sf = TTF_RenderText_Blended(font, buf, fg);
+	sprintf(buf, "%3.1f%cC", maxval, 0xb0);
+	txt_sf = TTF_RenderText_Blended(font, buf, fg_white);
 	rect.w = txt_sf->w;
 	rect.h = txt_sf->h;
 	rect.x = 80 + 256 + 10;
@@ -185,8 +188,8 @@ void dump_temps(double temps[16][4])
 	printf("\n");
 }
 
-//#define CFG_LSB	0x0au	// 16Hz
-#define CFG_LSB	0x0bu	//  8Hz
+//#define CFG_LSB       0x0au   // 16Hz
+#define CFG_LSB	0x0bu		//  8Hz
 
 #define CFG_MSB	0x74u
 
