@@ -128,7 +128,7 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 	txt_sf = TTF_RenderText_Blended(font, buf, fg_white);
 	rect.w = txt_sf->w;
 	rect.h = txt_sf->h;
-	rect.x = 10;
+	rect.x = minval < 0 ? 0 : 10;
 	rect.y = 4 * PIX_SIZE + 30;
 	SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 	SDL_FreeSurface(txt_sf);
