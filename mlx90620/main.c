@@ -54,27 +54,32 @@ SDL_Surface *sdl_init(void)
 	return screen;
 }
 
-Uint32 color_from_temp(double t, double maxval, double minval)
+Uint32 color_from_temp(double t, double f, double minval)
 {
 	Uint32 res = 0x000080ff;
-	double f = maxval - minval;
-	f = 255 / f;
 	t -= minval;
 	res |= ((int)(t * f) & 0xff) << 24;
 	res |= ((int)(t * f) & 0xff) << 16;
 	return res;
 }
 
+// less visible noise with lower values
+#define RANGE_MULTIPLIER	20
+
 void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 {
 	int x, y;
 	double maxval = -INFINITY, minval = INFINITY;
+	double f, g;
 	char buf[32];
+	int range;
 	SDL_Color fg_black = { 0, 0, 0 };
 	SDL_Color fg_white = { 255, 255, 255 };
 	SDL_Rect rect;
 	SDL_Surface *txt_sf;
+
 	SDL_FillRect(sf, NULL, 0);
+
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
 			if (temps[x][y] > maxval)
@@ -83,15 +88,14 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 				minval = temps[x][y];
 		}
 	}
-	if ((maxval - minval) < 20) {
-		int diff = maxval - minval;
-		diff = 20 - diff;
-		//maxval += diff;
-	}
+	f = maxval - minval;
+	range = (f * RANGE_MULTIPLIER) > 255 ? 255 : f * RANGE_MULTIPLIER;
+	f = range / f;
+
 	for (y = 0; y < 4; y++) {
 		for (x = 0; x < 16; x++) {
 			Uint32 col =
-			    color_from_temp(temps[x][3 - y], maxval, minval);
+			    color_from_temp(temps[x][3 - y], f, minval);
 			boxColor(sf, x * PIX_SIZE, y * PIX_SIZE,
 				 x * PIX_SIZE + PIX_SIZE - 1,
 				 y * PIX_SIZE + PIX_SIZE - 1, col);
@@ -108,9 +112,13 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 			SDL_FreeSurface(txt_sf);
 		}
 	}
-	for (x = 0; x < 256; x++) {
+
+	f = range;
+	f /= 255;
+	g = 0;
+	for (x = 0; x < 256; x++, g += f) {
 		vlineColor(sf, x + 80, PIX_SIZE * 4, PIX_SIZE * 4 + PIX_SIZE,
-			   0x80ff + (x << 16) + (x << 24));
+			   0x80ff + (((int)g) << 16) + (((int)g) << 24));
 	}
 
 	sprintf(buf, "%3.1f%cC", minval, 0xb0);
