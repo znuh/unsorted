@@ -107,8 +107,9 @@ void draw_picture(SDL_Surface * sf, double temps[16][4], double t_amb)
 			rect.w = txt_sf->w;
 			rect.h = txt_sf->h;
 			rect.x = x * PIX_SIZE + 10;
-			if((temps[x][3 - y] <= -10) || (temps[x][3 - y] >= 100))
-				rect.x -=5;
+			if ((temps[x][3 - y] <= -10)
+			    || (temps[x][3 - y] >= 100))
+				rect.x -= 5;
 			rect.y = y * PIX_SIZE + 20;
 			SDL_BlitSurface(txt_sf, NULL, sf, &rect);
 			SDL_FreeSurface(txt_sf);
