@@ -204,11 +204,11 @@ static inline uint16_t ping(void) {
 }
 
 int main(void) {
-	char buf[34];
+	char buf[36];
 	uint8_t ee_timer = 0;
 	
-	PORTB = (1<<PB7);
-	DDRB = (1<<PB7);
+	PORTB = (1<<PB7)|(1<<PB4);
+	DDRB = (1<<PB7)|(1<<PB4);
 
 	PORTD = 0;
 	DDRD = 0;
@@ -237,6 +237,7 @@ int main(void) {
 	
 	buf[0]='*';
 	buf[1+8] = buf[1+8+1+8] = buf[1+8+1+8+1+8] = ',';
+	buf[1+8+1+8+1+8+2] = ',';
 
 	buf[30]='#';
 	buf[31]='\r';
@@ -267,7 +268,16 @@ int main(void) {
 			u32tostr((uint8_t*)buf+1+8+1, mark_copy);
 			u32tostr((uint8_t*)buf+1+8+1+8+1, echo);
 			
-			buf[28]=0;
+			// error indicator - inverted input
+			buf[28] = (PINB & (1<<PB0)) ? '0' : '1';
+			if(buf[28]&1) {
+				PORTB &= ~(1<<PB4);	// ERROR-LED on
+			}
+			else {
+				PORTB |= (1<<PB4);	// ERROR-LED off
+			}
+			
+			buf[30]=0;
 			cksum((uint8_t *)buf);
 			
 			uart_send(buf);
