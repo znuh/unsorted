@@ -22,7 +22,7 @@ typedef struct spavenav_s {
 } spacenav_t;
 
 spacenav_t *spacenav_create(char *dev);
-void spacenav_destroy(spacenav_t *sn);
-void spacenav_get(spacenav_t *sn, sn_axes_t *axes);
+void spacenav_destroy(spacenav_t * sn);
+void spacenav_get(spacenav_t * sn, sn_axes_t * axes);
 
 #endif
