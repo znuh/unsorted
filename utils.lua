@@ -2,7 +2,14 @@
 if socket == nil then socket = require("socket") end
 
 function sleep(n)
-	socket.select(nil, nil, n)
+	-- keep the LUA interpreter responsive in case ctrl+c is pressed
+	while n >= 1 do
+		socket.select(nil, nil, 1)
+		n = n - 1
+	end
+	if n>0 then
+		socket.select(nil, nil, n)
+	end
 end
 
 function gettime()
@@ -15,10 +22,10 @@ function eta:new()
 	local res = {}
 	setmetatable(res, self)
 	self.__index = self
-	self.working = false
-	self.timecnt = 0
-	self.start_time = 0
-	return self
+	res.working = false
+	res.timecnt = 0
+	res.start_time = 0
+	return res
 end
 
 function eta:start_work()
@@ -118,8 +125,8 @@ function throttle:new(rate)
 	local res = {}
 	setmetatable(res, self)
 	self.__index = self
-	self.delayval = 1/rate
-	return self
+	res.delayval = 1/rate
+	return res
 end
 
 function tohex(buf)
