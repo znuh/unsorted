@@ -111,7 +111,7 @@ static void *sn_loop(void *priv)
 	return NULL;
 }
 
-spacenav_t *spacenav_create(char *dev)
+spacenav_t *spacenav_create(const char *dev)
 {
 	spacenav_t *sn = NULL;
 	int res = open(dev, O_RDONLY);
