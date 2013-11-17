@@ -6,5 +6,5 @@ all:
 	gcc -O -shared -fPIC spacenav.o spacenav_lua.o -o spacenav.so -llua5.2 -lpthread
 
 clean:
-	rm -f *.o spacenav *~
+	rm -f *.o *.so spacenav *~
 
