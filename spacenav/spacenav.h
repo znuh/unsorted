@@ -21,7 +21,11 @@ typedef struct spavenav_s {
 	struct timeval tm[6];
 } spacenav_t;
 
+<<<<<<< HEAD
 spacenav_t *spacenav_create(char *dev);
+=======
+spacenav_t *spacenav_create(const char *dev);
+>>>>>>> 2327f4f25b583950a85f7c5ed5a2941b43895445
 void spacenav_destroy(spacenav_t * sn);
 void spacenav_get(spacenav_t * sn, sn_axes_t * axes);
 
