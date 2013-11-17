@@ -111,11 +111,7 @@ static void *sn_loop(void *priv)
 	return NULL;
 }
 
-<<<<<<< HEAD
-spacenav_t *spacenav_create(char *dev)
-=======
 spacenav_t *spacenav_create(const char *dev)
->>>>>>> 2327f4f25b583950a85f7c5ed5a2941b43895445
 {
 	spacenav_t *sn = NULL;
 	int res = open(dev, O_RDONLY);
