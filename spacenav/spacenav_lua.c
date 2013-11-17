@@ -1,5 +1,3 @@
-#include <alloca.h>
-#include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include "spacenav.h"
