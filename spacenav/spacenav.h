@@ -19,10 +19,11 @@ typedef struct spavenav_s {
 	pthread_t sn_thread;
 	sn_axes_t axes;
 	struct timeval tm[6];
+	int errorcode;
 } spacenav_t;
 
 spacenav_t *spacenav_create(const char *dev);
 void spacenav_destroy(spacenav_t * sn);
-void spacenav_get(spacenav_t * sn, sn_axes_t * axes);
+int spacenav_get(spacenav_t * sn, sn_axes_t * axes);
 
 #endif
