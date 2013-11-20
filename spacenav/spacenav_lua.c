@@ -20,8 +20,12 @@ static int get_vals(lua_State *L)
 {
 	spacenav_t *sn = gethandle(L);
 	sn_axes_t v;
+	int res;
 	
-	spacenav_get(sn, &v);
+	res = spacenav_get(sn, &v);
+	
+	if (res)
+		return 0;
 	
 	lua_createtable(L, 0, 8);
 	

@@ -58,6 +58,9 @@ static void *sn_loop(void *priv)
 		if (!res)
 			continue;
 		else if (res < 0) {
+			pthread_mutex_lock(&sn->mtx);
+			sn->errorcode = res;
+			pthread_mutex_unlock(&sn->mtx);
 			fprintf(stderr, "[spacenav] poll error: %s\n",
 				strerror(errno));
 			break;
@@ -65,6 +68,9 @@ static void *sn_loop(void *priv)
 
 		res = read(sn->fd, &evt, sizeof(evt));
 		if (res != sizeof(evt)) {
+			pthread_mutex_lock(&sn->mtx);
+			sn->errorcode = res;
+			pthread_mutex_unlock(&sn->mtx);
 			fprintf(stderr,
 				"[spacenav] read error: got %d, expected %ld\n",
 				res, sizeof(evt));
@@ -156,15 +162,22 @@ static uint32_t tm_diff_ms(struct timeval *a, struct timeval *b)
 	return diff;
 }
 
-void spacenav_get(spacenav_t * sn, sn_axes_t * axes)
+int spacenav_get(spacenav_t * sn, sn_axes_t * axes)
 {
 	struct timeval tm[6], now;
-
+	int res;
+	
 	pthread_mutex_lock(&sn->mtx);
 	memcpy(axes, &sn->axes, sizeof(sn_axes_t));
 	memcpy(tm, sn->tm, sizeof(struct timeval) * 6);
+	res = sn->errorcode;
 	pthread_mutex_unlock(&sn->mtx);
-
+	
+	if(res) {
+		bzero(axes, sizeof(sn_axes_t));
+		return res;
+	}
+	
 	gettimeofday(&now, NULL);
 	if (tm_diff_ms(&now, tm) >= AXIS_VALUE_TIMEOUT)
 		axes->x = 0;
@@ -178,6 +191,8 @@ void spacenav_get(spacenav_t * sn, sn_axes_t * axes)
 		axes->ry = 0;
 	if (tm_diff_ms(&now, tm + 5) >= AXIS_VALUE_TIMEOUT)
 		axes->rz = 0;
+	
+	return 0;
 }
 
 #ifdef TEST_LIB
