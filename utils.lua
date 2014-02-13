@@ -178,6 +178,25 @@ function dump_table(t,prefix)
 	end
 end
 
+function list_funcs(p1,p2)
+	local tbl = _G
+	local str
+	if type(p1) == "table" then 
+		tbl = p1
+	elseif type(p1) == "string" then
+		str = p1
+	end
+	if type(p2) == "string" then
+		str = p2
+	end
+	for k,v in pairs(tbl) do
+		if type(v) == "function" and 
+			(str == nil or string.find(k,str) ~= nil) then
+			print(k)
+		end
+	end
+end
+
 function file_exists(name)
 	local f=io.open(name,"r")
 	if f ~= nil then 
