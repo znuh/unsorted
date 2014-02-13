@@ -130,6 +130,9 @@ function throttle:new(rate)
 end
 
 function tohex(buf)
+	if type(buf) == "number" then
+		return string.format('%02x', buf)
+	end
 	local str = ""
 	if buf == nil then return "<nil>" end
 	for i=1,#buf do
