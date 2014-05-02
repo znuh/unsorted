@@ -13,10 +13,10 @@
 #include <alloca.h>
 #include <assert.h>
 
-#define SLAVE_ADDR		3
+#define SLAVE_ADDR		0
 #define TUN_CAP_VAL		6	// 31204 Hz * 16 = 499264 Hz
 //#define OUTDOOR
-//#define MASK_DISTURBER
+#define MASK_DISTURBER
 
 typedef struct as3935_s {
 	uint8_t pwd:1;
@@ -136,6 +136,10 @@ int as3935_init(int fd) {
 	as3935_wreg(fd, 3, val);
 #endif
 
+	// test
+	//as3935_wreg(fd,0, 1<<1);
+	//as3935_wreg(fd, 1, 0x00); // noise floor level
+
 	return 0;
 }
 
@@ -168,18 +172,19 @@ int main(int argc, char **argv) {
 	else {
 		while(1) {
 			uint8_t ints;
-			usleep(10000);
+			usleep(5000);
 			as3935_rreg(fd, 3, &ints);
-			if(ints&7) {
+			ints&=13;
+			if(ints) {
 				as3935_t regs;
 				time_t now = time(NULL);
 #ifdef MASK_DISTURBER
 				if((ints&7) == 4) continue;
 #endif
-				printf("%s",ctime(&now));
-				if(ints&1) printf("noise level too high\n");
-				if(ints&4) printf("disturber detected\n");
-				if(ints&8) printf("lightning\n");
+				printf("%sints: %x / ",ctime(&now),ints);
+				if(ints&1) printf("noise level too high:\n");
+				if(ints&4) printf("disturber detected:\n");
+				if(ints&8) printf("lightning:\n");
 				dump_regs(fd, &regs);
 			
 			} // ints
