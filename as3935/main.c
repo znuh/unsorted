@@ -13,10 +13,10 @@
 #include <alloca.h>
 #include <assert.h>
 
-#define SLAVE_ADDR		0
+#define SLAVE_ADDR		3
 #define TUN_CAP_VAL		6	// 31204 Hz * 16 = 499264 Hz
 //#define OUTDOOR
-#define MASK_DISTURBER
+//#define MASK_DISTURBER
 
 typedef struct as3935_s {
 	uint8_t pwd:1;
@@ -117,13 +117,18 @@ int as3935_rreg(int fd, uint8_t reg, uint8_t *val) {
 
 int as3935_init(int fd) {
 	
+        as3935_wreg(fd, 0, 0); // disable powerdown
+        usleep(10000);
 	as3935_wreg(fd, 0x3c, DIRECT_COMMAND); // preset default
+        usleep(10000);
+        as3935_wreg(fd, 0x08, TUN_CAP_VAL);
+        usleep(5000);
 	as3935_wreg(fd, 0x3d, DIRECT_COMMAND); // calib_rco
-	as3935_wreg(fd, 0x08, (1<<5));
-	usleep(3000);
-	as3935_wreg(fd, 0x08, 0);
-	
+        usleep(10000);
+	as3935_wreg(fd, 0x08, (1<<5)|TUN_CAP_VAL);
+	usleep(2000);
 	as3935_wreg(fd, 0x08, TUN_CAP_VAL);
+	usleep(5000);
 	
 #ifdef OUTDOOR
 	as3935_wreg(fd, 0, (14<<1));
@@ -141,6 +146,18 @@ int as3935_init(int fd) {
 	//as3935_wreg(fd, 1, 0x00); // noise floor level
 
 	return 0;
+}
+
+void wait_int(int fd) {
+        int res;
+        uint8_t val;
+        assert(ioctl(fd, I2C_SLAVE, 0x1a) >= 0);
+        while(1) {
+                res = read(fd, &val, 1);
+                assert(res == 1);
+                if(val&1) break;
+        }
+        assert(ioctl(fd, I2C_SLAVE, SLAVE_ADDR) >= 0);
 }
 
 int main(int argc, char **argv) {
@@ -172,16 +189,19 @@ int main(int argc, char **argv) {
 	else {
 		while(1) {
 			uint8_t ints;
-			usleep(5000);
+                        time_t now;
+                        wait_int(fd);
+			usleep(2000);
 			as3935_rreg(fd, 3, &ints);
+                        now = time(NULL);
+                        printf("%sints: %x / ",ctime(&now),ints&15);
 			ints&=13;
 			if(ints) {
 				as3935_t regs;
-				time_t now = time(NULL);
+				
 #ifdef MASK_DISTURBER
-				if((ints&7) == 4) continue;
+				//if((ints&13) == 4) continue;
 #endif
-				printf("%sints: %x / ",ctime(&now),ints);
 				if(ints&1) printf("noise level too high:\n");
 				if(ints&4) printf("disturber detected:\n");
 				if(ints&8) printf("lightning:\n");
