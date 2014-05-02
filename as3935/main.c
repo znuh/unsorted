@@ -14,7 +14,7 @@
 #include <assert.h>
 
 #define SLAVE_ADDR		3
-#define TUN_CAP_VAL		6	// 31204 Hz * 16 = 499264 Hz
+#define TUN_CAP_VAL		5	// 31204 Hz * 16 = 499264 Hz
 //#define OUTDOOR
 //#define MASK_DISTURBER
 
@@ -129,6 +129,9 @@ int as3935_init(int fd) {
 	usleep(2000);
 	as3935_wreg(fd, 0x08, TUN_CAP_VAL);
 	usleep(5000);
+        
+        // LC test output
+        // as3935_wreg(fd, 0x08, (1<<7)|TUN_CAP_VAL);
 	
 #ifdef OUTDOOR
 	as3935_wreg(fd, 0, (14<<1));
