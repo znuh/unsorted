@@ -130,6 +130,9 @@ function throttle:new(rate)
 end
 
 function tohex(buf)
+	if type(buf) == "number" then
+		return string.format('%02x', buf)
+	end
 	local str = ""
 	if buf == nil then return "<nil>" end
 	for i=1,#buf do
@@ -175,6 +178,25 @@ function dump_table(t,prefix)
 	for k,v in pairs(t) do 
 		if type(v) == "table" then dump_table(v," "..prefix..k..".")
 		else print(prefix..k.."=",v) end
+	end
+end
+
+function list_funcs(p1,p2)
+	local tbl = _G
+	local str
+	if type(p1) == "table" then 
+		tbl = p1
+	elseif type(p1) == "string" then
+		str = p1
+	end
+	if type(p2) == "string" then
+		str = p2
+	end
+	for k,v in pairs(tbl) do
+		if type(v) == "function" and 
+			(str == nil or string.find(k,str) ~= nil) then
+			print(k)
+		end
 	end
 end
 
