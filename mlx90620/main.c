@@ -56,6 +56,11 @@ SDL_Surface *sdl_init(void)
 	font =
 	    TTF_OpenFont
 	    ("/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf", 18);
+	if(!font) {
+		font =
+			TTF_OpenFont
+			("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 18);
+	}
 	assert(font);
 
 	video_bpp = 32;
