@@ -40,7 +40,7 @@ void hexdump(const uint8_t *d, int l) {
 #define SI1132_REG_CHIP_STAT	0x30
 
 #define SI1132_PARAM_CHLIST		0x01
-#define SI1132_PARAM_CHLIST_MASK	0xf0
+#define SI1132_PARAM_CHLIST_MASK	0xb0
 
 #define SI1132_REG_MEAS_RATE0	0x08
 #define SI1132_REG_MEAS_RATE1	0x09
@@ -50,22 +50,19 @@ void hexdump(const uint8_t *d, int l) {
 #define SI1132_REG_UCOEF2		0x15
 #define SI1132_REG_UCOEF3		0x16
 
-/*
-
-  // fastest clocks
-  	writeParam(Si1132_PARAM_ALSVISADCGAIN, 3);
-  // take 511 clocks to measure
-  	writeParam(Si1132_PARAM_ALSVISADCCOUNTER, Si1132_PARAM_ADCCOUNTER_511CLK);
-  // in high range mode (not normal signal)
-  	//writeParam(Si1132_PARAM_ALSVISADCMISC, Si1132_PARAM_ALSVISADCMISC_VISRANGE);
-	* */
-
 const int init_regs[] = {
 	SI1132_REG_MEAS_RATE0, 	0x20,
+	
 	SI1132_REG_UCOEF0, 		0x7b,
 	SI1132_REG_UCOEF1, 		0x6b,
 	SI1132_REG_UCOEF2, 		0x01,
 	SI1132_REG_UCOEF3, 		0x00,
+	/*
+	SI1132_REG_UCOEF0, 		0x29,
+	SI1132_REG_UCOEF1, 		0x89,
+	SI1132_REG_UCOEF2, 		0x02,
+	SI1132_REG_UCOEF3, 		0x00,
+	*/
 	-1, -1
 };
 
@@ -85,7 +82,7 @@ const int init_parms[] = {
 	SI1132_PARAM_ALS_IR_ADC_COUNTER,				0x70,
 	SI1132_PARAM_ALS_IR_ADC_MISC,				0x20,
 	
-	SI1132_PARAM_ALS_VIS_ADC_GAIN,				3,
+	SI1132_PARAM_ALS_VIS_ADC_GAIN,				0,
 	SI1132_PARAM_ALS_VIS_ADC_COUNTER,				0x70,
 	SI1132_PARAM_ALS_VIS_ADC_MISC,				0x20,
 	
@@ -112,14 +109,16 @@ int si1132_read_reg16(int fd, int reg) {
 	uint8_t buf[2] = {reg&0xff};
 	int res = write(fd,buf,1);
 	assert(res == 1);
+	usleep(1000);
 	res = read(fd,buf,2);
 	assert(res == 2);
+	//printf("%2x %2x\n",buf[1],buf[0]);
 	return (buf[1]<<8)|buf[0];
 }
 
 int si1132_cmd(int fd, int cmd, int param) {
 	int res;
-	retry:
+//	retry:
 	si1132_write_reg(fd, SI1132_REG_CMD, 0);
 	si1132_write_reg(fd, SI1132_REG_PARAM_WR, param&0xff);
 	si1132_write_reg(fd, SI1132_REG_CMD, cmd&0xff);
@@ -133,7 +132,9 @@ int si1132_cmd(int fd, int cmd, int param) {
 }
 
 void si1132_read(int fd, float *uv, float *ir, float *vis) {
-	*uv = si1132_read_reg16(fd, 0x2c) / 100;
+	//do {
+		*uv = si1132_read_reg16(fd, 0x2c) / 100;
+	//} while(*uv > 100);
 	*ir = si1132_read_reg16(fd, 0x24);
 	*vis = si1132_read_reg16(fd, 0x22);
 }
@@ -171,7 +172,7 @@ void dump_regs(int fd) {
 }
 
 int main(int argc, char **argv) {
-	int fd, res;
+	int fd;
 	
 	assert(argc>1);
 	fd = open(argv[1], O_RDWR);
@@ -187,7 +188,7 @@ int main(int argc, char **argv) {
 		float uv, ir, vis;
 		si1132_read(fd,&uv,&ir,&vis);
 		si1132_cmd(fd,0x06,0);
-		printf("%4.1f %4.1f %4.1f\n",uv,ir,vis);
+		printf("%ld %2.1f %5.0f %5.0f\n",time(NULL),uv,ir,vis);
 		usleep(500000);
 	}
 	
