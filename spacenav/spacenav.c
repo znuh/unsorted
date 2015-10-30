@@ -120,7 +120,7 @@ static void *sn_loop(void *priv)
 spacenav_t *spacenav_create(const char *dev)
 {
 	spacenav_t *sn = NULL;
-	const char *ldev = dev ? dev : "/dev/spacenavigator";
+	const char *ldev = dev ? dev : "/dev/input/spacenavigator";
 	int res = open(ldev, O_RDONLY);
 
 	if (res < 0)
