@@ -120,7 +120,8 @@ static void *sn_loop(void *priv)
 spacenav_t *spacenav_create(const char *dev)
 {
 	spacenav_t *sn = NULL;
-	int res = open(dev, O_RDONLY);
+	const char *ldev = dev ? dev : "/dev/spacenavigator";
+	int res = open(ldev, O_RDONLY);
 
 	if (res < 0)
 		return NULL;
@@ -198,7 +199,7 @@ int spacenav_get(spacenav_t * sn, sn_axes_t * axes)
 #ifdef TEST_LIB
 int main(int argc, char **argv)
 {
-	spacenav_t *sn = spacenav_create("/dev/input/spacenavigator");
+	spacenav_t *sn = spacenav_create(NULL);
 	if (sn) {
 		sn_axes_t ax;
 		printf("press both buttons to quit\n");

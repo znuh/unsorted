@@ -55,7 +55,7 @@ static int get_vals(lua_State *L)
 static int open(lua_State *L)
 {
 	spacenav_t *sn = NULL;
-	const char *dev = "/dev/input/spacenavigator";
+	const char *dev = NULL;
 	
 	if(lua_isstring(L, 2)) {
 		dev = lua_tostring(L, 2);
