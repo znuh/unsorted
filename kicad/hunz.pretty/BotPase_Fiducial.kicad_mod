@@ -1,0 +1,12 @@
+(module BotPase_Fiducial (layer F.Cu) (tedit 56A4BFCE)
+  (descr "Circular Fiducial, 1mm bare copper bottom; 2.54mm keepout")
+  (tags marker)
+  (attr virtual)
+  (fp_text reference REF** (at 3.4 0.7) (layer F.SilkS) hide
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (fp_text value BotPaste_Fiducial (at 0 -1.8) (layer F.Fab)
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (pad ~ smd circle (at 0 0) (size 1 1) (layers B.Cu B.Paste B.Mask))
+)
