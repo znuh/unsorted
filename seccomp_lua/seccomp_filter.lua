@@ -25,6 +25,8 @@ end
 SC_RET = {
 	KILL = 0,
 	TRAP = 0x00030000,
+	ERRNO = 0x00050000,
+	TRACE = 0x7ff00000,
 	ALLOW = 0x7fff0000,
 }
 
@@ -113,9 +115,10 @@ local function install_filter(t)
 end
 
 function seccomp_filter_syscalls(sc,rc,policy)
-	assert((rc == SC_RET.KILL) or (rc == SC_RET.TRAP) or (rc == SC_RET.ALLOW))
+	assert((rc == SC_RET.KILL) or (rc == SC_RET.TRAP) or (rc == SC_RET.ALLOW)
+		or (rc == SC_RET.ERRNO) or (rc == SC_RET.TRACE))
 	assert((policy == SC_RET.KILL) or (policy == SC_RET.TRAP) or 
-		(policy == SC_RET.ALLOW))
+		(policy == SC_RET.ALLOW) or (policy == SC_RET.ERRNO) or (policy == SC_RET.TRACE))
 	
 	local t = {}
 		
@@ -124,6 +127,8 @@ function seccomp_filter_syscalls(sc,rc,policy)
 	
 	for k,v in ipairs(sc) do
 		local scn = syscalls[v]
+		if type(v) == "number" then scn = v end
+		assert(scn,"unknown syscall: "..v)
 		--print(scn)
 		table.insert(t,bpf_jump(BPF.JMP+BPF.JEQ+BPF.K, scn, 0, 1))
 		table.insert(t,bpf_stmt(BPF.RET+BPF.K, rc))
