@@ -1,25 +1,24 @@
 require "seccomp"
 
+local arch = nil
 local syscalls = nil
 local need_arch_filter = true
 
-local function load_syscalls(fn)
-	local res = {}
-	local fh = io.open(fn,"r")
-	for line in fh:lines() do
-		local name, id = line:match("#define%s+__NR_(%S+)%s+(%d+)")
-		if name and id then
-			res[name] = tonumber(id)
-			--print(name, id)
-		end
-	end
-	fh:close()
-	return res
+local function get_arch()
+	local ph = io.popen("uname -m","r")
+	local arch = ph:read("*line")
+	ph:close()
+	return arch
 end
 
 if not syscalls then
-	-- TODO: FIXME
-	syscalls = load_syscalls("/usr/include/x86_64-linux-gnu/asm/unistd_64.h")
+	arch = get_arch()
+	assert((arch == "x86_64") or arch:find("arm"))
+	if arch == "x86_64" then
+		syscalls = require "syscalls_x86_64"
+	elseif arch:find("arm") then
+		syscalls = require "syscalls_armel_eabi"
+	end
 end
 
 SC_RET = {
@@ -157,3 +156,11 @@ print("OHAI!")
 print("now you should see the test being terminated")
 seccomp_filter_syscalls({"write"},SC_RET.TRAP,SC_RET.ALLOW) -- blacklist write
 print("this should NOT be readable!")
+
+--[[ TODO:
+add subtables for alternative syscalls like mmap/mmap2
+good_syscalls = {
+	{"mmap", "mmap2"},
+	...
+}
+]]--
