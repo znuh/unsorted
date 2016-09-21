@@ -53,13 +53,8 @@ print("waiting for SD...")
 repeat
 	body = get_url(url)
 until body
+
 --print(body)
---[[
-body = ""
-for line in io.lines() do
-	body = body .. line
-end
-]]--
 
 local list = parse_list(body)
 --dump_table(parse_list(txt))
