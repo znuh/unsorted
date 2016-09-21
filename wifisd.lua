@@ -24,15 +24,11 @@ end
 function parse_list(body)
 	local files = {}
 	local res = {}
-	--for fn, size in string.gmatch(body,">(%g+%.JPG).+(%d+)%sbytes.+") do
 	for fn in string.gmatch(body,">(%g+%.JPG)") do
-		--print(fn,size)
 		table.insert(files,fn)
 	end
 	local i=1
 	for sz in string.gmatch(body,"(%d+) bytes") do
-		--print(sz)
-		--table.insert(sizes,sz)
 		res[files[i]]=sz+0
 		i = i + 1
 	end

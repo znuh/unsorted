@@ -120,7 +120,7 @@ function seccomp_filter_syscalls(sc,rc,policy)
 		(policy == SC_RET.ALLOW) or (policy == SC_RET.ERRNO) or (policy == SC_RET.TRACE))
 	
 	local t = {}
-		
+	
 	-- load syscall number
 	table.insert(t,bpf_stmt(BPF.LD+BPF.W+BPF.ABS, 0))
 	
