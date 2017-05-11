@@ -2,21 +2,21 @@
 
 ; r0/1: bootloader
 
-.macro	blink
+;.macro	blink
     ; debug indicator    
 ;    inc bla
 ;    cpi bla, 4
 ;    brne NOBLINK
 
 ;    clr bla
-    in blal, PORTB
-    ldi bla, (1<<PB4)
-    eor bla, blal
-    out PORTB, bla
+;    in blal, PORTB
+;    ldi bla, (1<<PB4)
+;    eor bla, blal
+;    out PORTB, bla
 
 ;NOBLINK:
 
-.endm
+;.endm
 
 .def	myaddr	= r2
 .def	rxaddr	= r3
@@ -84,8 +84,8 @@ DIM_OFF:
     clr temp
     out TCCR0A, temp
 
-    ; off, force dim=0
-    ldi temp, (1<<PB2)|(0<<PB0)
+    ; off
+    ldi temp, (0<<PB4)|(0<<PB0)
     out PORTB, temp
     
     rjmp PKT_START
@@ -95,8 +95,8 @@ DIM_FULL:
     clr temp
     out TCCR0A, temp
 
-    ; on, force dim=1
-    ldi temp, (0<<PB2)|(1<<PB0)
+    ; on
+    ldi temp, (1<<PB4)|(1<<PB0)
     out PORTB, temp
 
     rjmp PKT_START
@@ -154,7 +154,7 @@ LONG_LOW:
     out TCCR0A, temp
     
     ; on if not yet done
-    cbi PORTB, PB2
+    sbi PORTB, PB4
     
     rjmp PKT_START
 
@@ -341,10 +341,10 @@ RESET:
     clr temp
     out OCR0A, temp
 
-    ; PB2: off, PB0/OC0A: dim
-    ldi temp, (0<<PB2)|(1<<PB0)|(1<<PB4)
+    ; PB4: on/off, PB0/OC0A: dim
+    ldi temp, (1<<PB0)|(1<<PB4)
     out PORTB, temp
-    ldi temp, (1<<PB2)|(1<<PB0)|(1<<PB4)
+    ldi temp, (1<<PB0)|(1<<PB4)
     out DDRB, temp
 
     ; enable T0 overflow int
@@ -393,7 +393,7 @@ WAIT:
     out TCCR0A, temp
 
     ; on, force dim=1
-    ldi temp, (0<<PB2)|(1<<PB0)
+    ldi temp, (1<<PB4)|(1<<PB0)
     out PORTB, temp
 
     ; 4.8MHz/8 = 600 kHz
