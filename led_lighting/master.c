@@ -13,7 +13,7 @@ uint16_t *fptr = frame+9;
 uint8_t flen=0;
 uint8_t cksum=0;
 
-volatile uint8_t vals[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+volatile uint8_t vals[16]; // = {0x10, 0x20, 0x40, 0x80, 0xff, 0x10, 0x20, 0x40};
 static uint8_t have_addr = 0;
 static uint8_t addr = 0;
 
@@ -23,9 +23,9 @@ ISR(USART_RXC_vect) {
 		vals[addr] = val;
 		have_addr = 0;
 	}
-	else if (val <= 8) {
+	else if (val < 15) {
 		have_addr = 1;
-		addr = val-1;
+		addr = val;
 	}
 }
 
@@ -111,12 +111,15 @@ int main(void) {
 	UBRRH = 0;
 	UBRRL = 12;
 	
+	for(i=0;i<16;i++)
+		vals[i] = i<<4;
+	
 	sei();
 	
 	while(1) {
-		for(i=1;i<=8;i++) {
+		for(i=0;i<=15;i++) {
 			put_frame(i);
-			put_frame(vals[i-1]);
+			put_frame(vals[i]);
 			send_frame();
 			while(TIMSK) {} // wait while send busy
 		}
