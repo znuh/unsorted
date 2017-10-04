@@ -17,6 +17,8 @@ static int fd_nonblock(int sfd) {
 	return res;
 }
 
+static char buf[4096];
+
 int main(int argc, char **argv) {
 	FILE *dst;
 	int gps_fd=-1;
@@ -55,7 +57,6 @@ int main(int argc, char **argv) {
 			puts("GPS lost");
 		}
 		else if(pfd.revents & POLLIN) {
-			char buf[128];
 			res=read(gps_fd, buf, sizeof(buf));
 			if(res > 0) {
 				fprintf(dst, "%d.%ld\n",(int)ts.tv_sec, ts.tv_nsec);
