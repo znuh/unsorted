@@ -209,3 +209,15 @@ function file_exists(name)
 		return false
 	end
 end
+
+function asciiguard(str)
+	local res = ""
+	for i=1,#str do
+		local c = string.byte(str,i)
+		if c < 0x20 or c > 0x7e then
+			c = string.byte('.')
+		end
+		res = res .. string.char(c)
+	end
+	return res
+end
