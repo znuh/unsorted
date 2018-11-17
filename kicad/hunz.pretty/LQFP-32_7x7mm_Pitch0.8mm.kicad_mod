@@ -1,4 +1,4 @@
-(module Housings_QFP:LQFP-32_7x7mm_Pitch0.8mm (layer F.Cu) (tedit 54130A77)
+(module LQFP-32_7x7mm_Pitch0.8mm (layer F.Cu) (tedit 54130A77)
   (descr "LQFP32: plastic low profile quad flat package; 32 leads; body 7 x 7 x 1.4 mm (see NXP sot358-1_po.pdf and sot358-1_fr.pdf)")
   (tags "QFP 0.8")
   (attr smd)

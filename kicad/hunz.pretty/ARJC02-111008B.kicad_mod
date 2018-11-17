@@ -35,7 +35,7 @@
   (pad "" np_thru_hole circle (at 5.665 -0.3 180) (size 3.81 3.81) (drill 3.2) (layers *.Cu *.Mask F.SilkS))
   (pad "" np_thru_hole circle (at -5.765 -0.3 180) (size 3.81 3.81) (drill 3.2) (layers *.Cu *.Mask F.SilkS))
   (model /home/hunz/projects/github/hwdev/ca5/kicad/3d/arj11b.wrl
-    (at (xyz -0 -0.04 0.5))
+    (offset (xyz -0 -1.015999984741211 12.69999980926514))
     (scale (xyz 380 380 380))
     (rotate (xyz -90 180 0))
   )

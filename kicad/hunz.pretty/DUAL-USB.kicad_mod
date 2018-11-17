@@ -23,7 +23,7 @@
   (pad SH3 thru_hole circle (at 6.57 -7.47) (size 3.2 3.2) (drill 2.3) (layers *.Cu *.Mask F.SilkS))
   (pad SH4 thru_hole circle (at -6.57 -7.47) (size 3.2 3.2) (drill 2.3) (layers *.Cu *.Mask F.SilkS))
   (model /home/hunz/projects/github/hwdev/ca5/kicad/3d/usb_a-usb_a-2p-c.wrl
-    (at (xyz 0 -0.2 0.2))
+    (offset (xyz 0 -5.079999923706055 5.079999923706055))
     (scale (xyz 3.9 3.9 3.9))
     (rotate (xyz -90 0 0))
   )

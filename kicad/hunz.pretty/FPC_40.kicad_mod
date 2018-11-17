@@ -65,7 +65,7 @@
   (pad 0 smd rect (at -11.65 1.45) (size 1.8 2.2) (layers F.Cu F.Paste F.Mask))
   (pad 0 smd rect (at 11.65 1.45) (size 1.8 2.2) (layers F.Cu F.Paste F.Mask))
   (model /home/hunz/projects/github/hwdev/ca5/kicad/3d/62684402100alf.wrl
-    (at (xyz 0 -0.1 0.03))
+    (offset (xyz 0 -2.539999961853027 0.7619999885559082))
     (scale (xyz 5 5 5))
     (rotate (xyz -90 0 0))
   )
