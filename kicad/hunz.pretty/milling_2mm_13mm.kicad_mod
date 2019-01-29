@@ -1,6 +1,7 @@
-(module milling_2mm_13mm (layer F.Cu) (tedit 5C509488)
+(module milling_2mm_13mm (layer F.Cu) (tedit 5C5098C4)
   (descr "milling 2mm 13mm")
   (tags milling)
+  (attr virtual)
   (fp_text reference REF** (at 0.1 -0.3 90) (layer F.SilkS) hide
     (effects (font (size 1 1) (thickness 0.15)))
   )

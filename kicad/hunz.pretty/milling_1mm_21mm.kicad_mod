@@ -1,6 +1,7 @@
-(module milling_1mm_21mm (layer F.Cu) (tedit 5C509413)
+(module milling_1mm_21mm (layer F.Cu) (tedit 5C5098B5)
   (descr "milling 1mm 21mm")
   (tags milling)
+  (attr virtual)
   (fp_text reference REF** (at 0.1 -0.3 90) (layer F.SilkS) hide
     (effects (font (size 1 1) (thickness 0.15)))
   )
