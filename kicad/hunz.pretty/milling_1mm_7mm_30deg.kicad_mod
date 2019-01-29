@@ -1,0 +1,17 @@
+(module milling_1mm_7mm_30deg (layer F.Cu) (tedit 5C509CBD)
+  (descr "milling 2mm 13mm")
+  (tags milling)
+  (attr virtual)
+  (fp_text reference REF** (at 0.1 -0.3 90) (layer F.SilkS) hide
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (fp_text value milling_1mm_7mm_30deg (at 0 -3.1) (layer F.Fab) hide
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (pad "" np_thru_hole oval (at 0 0 30) (size 1 7) (drill oval 1 7) (layers *.Cu *.Mask))
+  (model Pin_Headers.3dshapes/Pin_Header_Straight_1x01.wrl
+    (at (xyz 0 0 0))
+    (scale (xyz 1 1 1))
+    (rotate (xyz 0 0 90))
+  )
+)
