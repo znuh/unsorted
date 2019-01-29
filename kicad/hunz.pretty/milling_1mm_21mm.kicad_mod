@@ -1,0 +1,11 @@
+(module milling_1mm_21mm (layer F.Cu) (tedit 5C509413)
+  (descr "milling 1mm 21mm")
+  (tags milling)
+  (fp_text reference REF** (at 0.1 -0.3 90) (layer F.SilkS) hide
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (fp_text value milling_1mm_21mm (at 0 -3.1) (layer F.Fab) hide
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (pad "" np_thru_hole oval (at 0 0) (size 1 21) (drill oval 1 21) (layers *.Cu *.Mask))
+)
