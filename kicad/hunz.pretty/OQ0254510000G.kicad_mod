@@ -1,4 +1,4 @@
-(module OQ0254510000G (layer F.Cu) (tedit 5BF06C15)
+(module OQ0254510000G (layer F.Cu) (tedit 5C72E891)
   (descr "simple 2-pin terminal block, pitch 5.08mm, revamped version of bornier2")
   (tags "terminal block bornier2")
   (fp_text reference J7 (at 2.54 -5.08) (layer F.SilkS)
@@ -26,8 +26,8 @@
   )
   (pad 2 thru_hole circle (at 5.08 0) (size 3 3) (drill 1.52) (layers *.Cu *.Mask))
   (pad 1 thru_hole rect (at 0 0) (size 3 3) (drill 1.52) (layers *.Cu *.Mask))
-  (model ${KISYS3DMOD}/TerminalBlock.3dshapes/TerminalBlock_bornier-2_P5.08mm.wrl
-    (offset (xyz 2.539999961853027 0 0))
+  (model ${KISYS3DMOD}/Connector_Phoenix_MSTB.3dshapes/PhoenixContact_MSTBA_2,5_2-G_1x02_P5.00mm_Horizontal.step
+    (at (xyz 0 0 0))
     (scale (xyz 1 1 1))
     (rotate (xyz 0 0 0))
   )
