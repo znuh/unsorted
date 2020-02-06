@@ -4,14 +4,16 @@
 
 socket = require("socket")
 
-local function find_route()
-	local p = io.popen("/sbin/route -n","r")
-	local iface
-	for line in p:lines() do
-		iface = iface or line:match("^0%.0%.0%.0.+%s+(%g+)$")
+local function interruptible_sleep(n)
+	while n > 0 do
+		local nap = math.min(n,0.05) -- keep things responsive (e.g. for SIGINT)
+		local res = pcall(socket.sleep, nap) -- prevent stack trace output upon SIGINT
+		if not res then
+			io.write("\r")
+			os.exit(0) 
+		end
+		n = n - nap
 	end
-	p:close()
-	return iface
 end
 
 local function fmt(val)
@@ -25,23 +27,61 @@ local function fmt(val)
 	return string.format("%5.1f "..prefix.."B/s",val)
 end
 
-local last_rx, last_tx
+local function read_stats(ifname)
+	local devs, rx, tx = {}, {}, {}
+	local fh = io.open("/proc/net/dev")
+	for line in fh:lines() do
+		local t = {}
+		for w in line:gmatch("(%g+)%s+") do
+			table.insert(t, w)
+		end
+		local dev = t[1]:match("(%g+):")
+		if ifname and ifname ~= dev then dev = nil end -- apply filter if given
+		if dev then	
+			table.insert(devs, dev)
+			rx[dev], tx[dev] = t[2], t[10] 
+		end
+	end
+	fh:close()
+	return devs, rx, tx
+end
 
-local iface = arg[1] or find_route() -- use if w/ default route if none given
+local last_rx, last_tx = {}, {}
+local n_devs = 0
+local rate = 1
+local last_time
+
+print("              RX            TX")
 
 while true do
-	local p = io.popen("/sbin/ifconfig "..iface,"r")
-	local rx, tx = nil, nil
-	for line in p:lines() do
-		rx = rx or line:match("RX%s+packets.*%s+bytes%s+(%d+)")
-		tx = tx or line:match("TX%s+packets.*%s+bytes%s+(%d+)")
+	
+	-- move cursor n_devs lines up
+	if n_devs > 0 then
+		io.write("\27["..n_devs.."A")
 	end
-	p:close()
-	if last_rx then
-		local r, t = rx - last_rx, tx - last_tx
-		io.write("\r"..iface.."   RX: "..fmt(r).."   TX: "..fmt(t))
-		io.stdout:flush()
+	
+	n_devs = 0
+	local now = socket.gettime()
+	local devs, rx, tx = read_stats(arg[1])
+	for _, dev in ipairs(devs) do
+		local rx, tx = rx[dev], tx[dev]
+		local rxdiff, txdiff = 0, 0
+		-- ignore 1st run w/o previous values
+		if last_rx[dev] ~= nil then
+			local dt = now - last_time
+			rxdiff = (rx - last_rx[dev]) / dt
+			txdiff = (tx - last_tx[dev]) / dt
+		end
+		-- format stuff
+		dev = string.format("%10s", dev)
+		local r, t = fmt(rxdiff), fmt(txdiff)
+		-- bold output for values > 0
+		if rxdiff > 0 then r = "\27[1m" .. r .. "\27[0m" end
+		if txdiff > 0 then t = "\27[1m" .. t .. "\27[0m" end
+		print(dev.."  "..r.."   "..t)
+		n_devs = n_devs + 1
 	end
 	last_rx, last_tx = rx, tx
-	socket.sleep(1)
+	last_time = now
+	interruptible_sleep(1/rate)
 end
