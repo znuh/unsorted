@@ -27,7 +27,7 @@ local function fmt(val)
 	return string.format("%5.1f "..prefix.."B/s",val)
 end
 
-local function read_stats(ifname)
+local function read_stats(iflist)
 	local devs, rx, tx = {}, {}, {}
 	local fh = io.open("/proc/net/dev")
 	for line in fh:lines() do
@@ -36,7 +36,7 @@ local function read_stats(ifname)
 			table.insert(t, w)
 		end
 		local dev = t[1]:match("(%g+):")
-		if ifname and ifname ~= dev then dev = nil end -- apply filter if given
+		if iflist and not iflist[dev] then dev = nil end
 		if dev then	
 			table.insert(devs, dev)
 			rx[dev], tx[dev] = t[2], t[10] 
@@ -46,12 +46,30 @@ local function read_stats(ifname)
 	return devs, rx, tx
 end
 
+local function get_active_ifs()
+	local devs = {}
+	local ph = io.popen("/usr/bin/ip link show up","r")
+	for line in ph:lines() do
+		local name = line:match("^%d+:%s+(%g+):")
+		if name then devs[name] = true end
+	end
+	ph:close()
+	return devs
+end
+
 local last_rx, last_tx = {}, {}
 local n_devs = 0
 local rate = 1
 local last_time
 
 print("              RX            TX")
+
+local iflist = {}
+if arg[1] then
+	iflist[arg[1]] = true
+else 
+	iflist = get_active_ifs()
+end
 
 while true do
 	
@@ -62,7 +80,7 @@ while true do
 	
 	n_devs = 0
 	local now = socket.gettime()
-	local devs, rx, tx = read_stats(arg[1])
+	local devs, rx, tx = read_stats(iflist)
 	for _, dev in ipairs(devs) do
 		local rx, tx = rx[dev], tx[dev]
 		local rxdiff, txdiff = 0, 0
