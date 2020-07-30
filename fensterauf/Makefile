@@ -4,4 +4,4 @@ all:
 	avr-objcopy -O ihex -R .eeprom sndtrig.elf sndtrig.hex
 
 load:
-	avrdude -cstk500v2 -P $(STKDEV) -p t13 -U flash:w:sndtrig.hex
+	avrdude -cstk500v2 -B 40 -P $(STKDEV) -p t13 -U flash:w:sndtrig.hex -U lfuse:w:0x7b:m -U hfuse:w:0xff:m

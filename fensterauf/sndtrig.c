@@ -1,12 +1,9 @@
-#define F_CPU		1000000UL
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 
-#include <util/delay.h>
-
-#include <stdint.h>
+#define MIN(a,b) ((a)<=(b)?(a):(b))
 
 /* 
  * PB1: CLK
@@ -22,7 +19,7 @@
  *                        16ms / 32ms / 64ms / 0.125s / 0.25s / 0.5s / 1s / 2s / 4s / 8s
  * 
  * f_clk_io (for T0): /8  /64  /256  /1024
- */ 
+ */
 
 static uint8_t rxbyte = 0;
 static uint8_t rxcount = 0;
@@ -57,13 +54,39 @@ ISR(TIM0_OVF_vect) {
 	rxcount = 0;
 }
 
-static uint8_t systick = 0;
+/* systick: 1/8 Hz
+ * 256 * 8s = ~34min
+ */
+
+static uint8_t last_trigger = 0;
 
 ISR(WDT_vect) {
-	systick++;
+	uint8_t next_trigger;
+
+	if(!last_trigger)
+		PORTB = 0;
+
+	if(last_trigger<255)
+		last_trigger++;
+
+	if(co2_msb < 4)                         /* do nothing while <1k */
+		return;
+
+	next_trigger = co2_msb - 4;
+	next_trigger = MIN(next_trigger, 0x1f); /* max: ~8k */
+	next_trigger = 0x1f-next_trigger;
+	next_trigger<<=3;
+
+	if(next_trigger < last_trigger)
+		return;
+
+	last_trigger = 0;
+	PORTB |= (1<<PB2);
 }
 
 int main(void) {
+
+	DDRB = (1<<PB2);
 
 	TCCR0B = (1<<CS01);
 	TIMSK0 = (1<<TOIE0);
