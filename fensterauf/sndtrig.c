@@ -71,18 +71,18 @@ int main(void) {
 	WDTCR = (1<<WDCE);
 	WDTCR = (1<<WDCE) | (1<<WDTIE) | (1<<WDP3) | (1<<WDP0);
 
-/*	
-	MCUCR = (1<<ISC01);
+	MCUCR = (1<<ISC01)|(1<<ISC00);
 	GIMSK = (1<<INT0);
-*/
-	
+
 	set_sleep_mode(SLEEP_MODE_IDLE);
-	
+
 	sei();
-		
+
+	sleep_enable();
+
 	while(1) {
-		sleep_mode();
+		sleep_cpu();
 	}
-	
+
 	return 0;
 }
