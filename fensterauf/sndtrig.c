@@ -68,6 +68,9 @@ int main(void) {
 	TCCR0B = (1<<CS01);
 	TIMSK0 = (1<<TOIE0);
 
+	WDTCR = (1<<WDCE);
+	WDTCR = (1<<WDCE) | (1<<WDTIE) | (1<<WDP3) | (1<<WDP0);
+
 /*	
 	MCUCR = (1<<ISC01);
 	GIMSK = (1<<INT0);
