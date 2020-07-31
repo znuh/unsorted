@@ -91,7 +91,7 @@ int main(void) {
 	sleep_enable();
 
 	while(1) {
-		uint8_t next_trigger, last_systick = systick;
+		uint8_t next_trigger, co2_tmp, last_systick = systick;
 
 		do {
 			sleep_cpu();
@@ -103,15 +103,16 @@ int main(void) {
 		if(last_trigger<255)
 			last_trigger++;
 
-		if((PINB & (1<<nENABLE_IN)) || (co2_msb < 4))    /* do nothing while <1k or disabled */
+		co2_tmp = co2_msb;
+		if((PINB & (1<<nENABLE_IN)) || (co2_tmp < 4))    /* do nothing while <1k or disabled */
 			continue;
 
-		next_trigger = co2_msb - 4;
+		next_trigger = co2_tmp - 4;
 		next_trigger = MIN(next_trigger, 0x1f);          /* max: ~8k */
 		next_trigger = 0x1f-next_trigger;
 		next_trigger<<=3;
 
-		if(next_trigger < last_trigger)
+		if(last_trigger < next_trigger)
 			continue;
 
 		last_trigger = 0;
