@@ -6,8 +6,10 @@
 #define MIN(a,b) ((a)<=(b)?(a):(b))
 
 /* 
- * PB1: CLK
- * PB0: DATA
+ * PB4: enable IN
+ * PB2: trigger OUT
+ * PB1: CLK IN
+ * PB0: DATA IN
  * 
  * clock sources:
  * 4.8 MHz, 9.6 MHz
@@ -25,11 +27,11 @@ static uint8_t rxbyte = 0;
 static uint8_t rxcount = 0;
 static uint8_t rxbuf[5];
 
-static uint8_t co2_msb = 0;
+static volatile uint8_t co2_msb = 0;
 
-ISR(INT0_vect) {
+ISR(INT0_vect) {                  /* __vector_1 */
 	rxbyte<<=1;
-	rxbyte |= PINB & (1<<PB0);
+	rxbyte |= PINB&1;
 
 	TCNT0 = 0;
 
@@ -50,7 +52,7 @@ ISR(INT0_vect) {
  * 128kHz/256 = 500Hz     equals 2ms
  * x8 overflow after 16ms
  */
-ISR(TIM0_OVF_vect) {
+ISR(TIM0_OVF_vect) {              /* __vector_3 */
 	rxcount = 0;
 }
 
@@ -58,25 +60,28 @@ ISR(TIM0_OVF_vect) {
  * 256 * 8s = ~34min
  */
 
-static uint8_t systick = 0;
+static volatile uint8_t systick = 0;
 
-ISR(WDT_vect) {
+ISR(WDT_vect) {                   /* __vector_8 */
 	systick++;
 }
 
-int main(void) {
-	uint8_t last_systick = 0, last_trigger = 255, next_trigger;
-	
-	PORTB = 0;
-	DDRB = (1<<PB2);
+#define TRIGGER_OUT      PB2
+#define nENABLE_IN       PB4
 
-	TCCR0B = (1<<CS01);
+int main(void) {
+	uint8_t last_trigger = 255;
+
+	PORTB = (1<<nENABLE_IN);          /* enable pullup */
+	DDRB = (1<<TRIGGER_OUT);
+
+	TCCR0B = (1<<CS01);               /* prescaler: 8 */
 	TIMSK0 = (1<<TOIE0);
 
-	WDTCR = (1<<WDCE);
+	WDTCR = (1<<WDCE);                /* enable watchdog IRQ every 8s */
 	WDTCR = (1<<WDCE) | (1<<WDTIE) | (1<<WDP3) | (1<<WDP0);
 
-	MCUCR = (1<<ISC01)|(1<<ISC00);
+	MCUCR = (1<<ISC01)|(1<<ISC00);    /* enable INT0 on rising edge */
 	GIMSK = (1<<INT0);
 
 	set_sleep_mode(SLEEP_MODE_IDLE);
@@ -86,24 +91,23 @@ int main(void) {
 	sleep_enable();
 
 	while(1) {
-
-		last_systick = systick;
+		uint8_t next_trigger, last_systick = systick;
 
 		do {
 			sleep_cpu();
 		} while(systick == last_systick);
 
 		if(!last_trigger)
-			PORTB = 0;
+			PORTB &= ~(1<<TRIGGER_OUT);
 
 		if(last_trigger<255)
 			last_trigger++;
 
-		if(co2_msb < 4)                         /* do nothing while <1k */
+		if((PINB & (1<<nENABLE_IN)) || (co2_msb < 4))    /* do nothing while <1k or disabled */
 			continue;
 
 		next_trigger = co2_msb - 4;
-		next_trigger = MIN(next_trigger, 0x1f); /* max: ~8k */
+		next_trigger = MIN(next_trigger, 0x1f);          /* max: ~8k */
 		next_trigger = 0x1f-next_trigger;
 		next_trigger<<=3;
 
@@ -111,7 +115,7 @@ int main(void) {
 			continue;
 
 		last_trigger = 0;
-		PORTB |= (1<<PB2);
+		PORTB |= (1<<TRIGGER_OUT);
 	}
 
 	return 0;
