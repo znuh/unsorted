@@ -58,34 +58,16 @@ ISR(TIM0_OVF_vect) {
  * 256 * 8s = ~34min
  */
 
-static uint8_t last_trigger = 0;
+static uint8_t systick = 0;
 
 ISR(WDT_vect) {
-	uint8_t next_trigger;
-
-	if(!last_trigger)
-		PORTB = 0;
-
-	if(last_trigger<255)
-		last_trigger++;
-
-	if(co2_msb < 4)                         /* do nothing while <1k */
-		return;
-
-	next_trigger = co2_msb - 4;
-	next_trigger = MIN(next_trigger, 0x1f); /* max: ~8k */
-	next_trigger = 0x1f-next_trigger;
-	next_trigger<<=3;
-
-	if(next_trigger < last_trigger)
-		return;
-
-	last_trigger = 0;
-	PORTB |= (1<<PB2);
+	systick++;
 }
 
 int main(void) {
-
+	uint8_t last_systick = 0, last_trigger = 255, next_trigger;
+	
+	PORTB = 0;
 	DDRB = (1<<PB2);
 
 	TCCR0B = (1<<CS01);
@@ -104,7 +86,32 @@ int main(void) {
 	sleep_enable();
 
 	while(1) {
-		sleep_cpu();
+
+		last_systick = systick;
+
+		do {
+			sleep_cpu();
+		} while(systick == last_systick);
+
+		if(!last_trigger)
+			PORTB = 0;
+
+		if(last_trigger<255)
+			last_trigger++;
+
+		if(co2_msb < 4)                         /* do nothing while <1k */
+			continue;
+
+		next_trigger = co2_msb - 4;
+		next_trigger = MIN(next_trigger, 0x1f); /* max: ~8k */
+		next_trigger = 0x1f-next_trigger;
+		next_trigger<<=3;
+
+		if(next_trigger < last_trigger)
+			continue;
+
+		last_trigger = 0;
+		PORTB |= (1<<PB2);
 	}
 
 	return 0;
