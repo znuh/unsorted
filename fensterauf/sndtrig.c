@@ -17,6 +17,8 @@
  * CLKPR: div 1/2/4/8/16/32/64/128/256
  * DIV8 fuse
  * 
+ * chosen system clock: 4.8MHz/8 = 600kHz
+ *
  * watchdog timer: 128kHz /2k    /4k    /8k    /16k     /32k /64k /128k /256k /512k /1024k
  *                        16ms / 32ms / 64ms / 0.125s / 0.25s / 0.5s / 1s / 2s / 4s / 8s
  * 
@@ -53,9 +55,9 @@ ISR(INT0_vect) {                  /* __vector_1 */
 	}
 }
 
-/* 4.8MHz/8 = 600kHz      equals 1.67 usec
- * 600kHz/256 = 2.3kHz    equals 0.4ms
- * x8 overflow after 3.4ms
+/* system clock: 4.8MHz/8   = 600  kHz  equals 1.67 us
+ * f_T0 = system clock / 64 = 9.375kHz  equals  107 us
+ * T0 overflow after 256     : ~36.6Hz  equals   27 ms
  */
 ISR(TIM0_OVF_vect) {              /* __vector_3 */
 	rxcount = 0;
@@ -80,7 +82,7 @@ int main(void) {
 	PORTB = (1<<nENABLE_IN);          /* enable pullup */
 	DDRB = (1<<TRIGGER_OUT);
 
-	TCCR0B = (1<<CS01);               /* prescaler: 8 */
+	TCCR0B = (1<<CS01)|(1<<CS00);     /* prescaler: 64 */
 	TIMSK0 = (1<<TOIE0);
 
 	WDTCR = (1<<WDCE);                /* enable watchdog IRQ every 8s */
@@ -109,8 +111,10 @@ int main(void) {
 			last_trigger++;
 
 		co2_tmp = co2_msb;
-		if((PINB & (1<<nENABLE_IN)) || (co2_tmp < 4))    /* do nothing while <1k or disabled */
+		if((PINB & (1<<nENABLE_IN)) || (co2_tmp <= 3)) {
+			last_trigger = 255;
 			continue;
+		}
 
 		next_trigger = co2_tmp - 4;
 		next_trigger = MIN(next_trigger, 0x1f);          /* max: ~8k */
