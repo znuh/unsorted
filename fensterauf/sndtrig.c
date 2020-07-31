@@ -43,7 +43,7 @@ ISR(INT0_vect) {                  /* __vector_1 */
 	if(rxcount&7)
 		return;
 
-	rxbuf[rxcount>>3] = rxbyte;
+	rxbuf[(rxcount>>3)-1] = rxbyte;
 	if((rxcount == 40) && (rxbuf[0] == 0x50) && (rxbyte == 0x0d)) {
 		uint8_t cksum = 0x50;
 		cksum += rxbuf[1];
@@ -53,9 +53,9 @@ ISR(INT0_vect) {                  /* __vector_1 */
 	}
 }
 
-/* 128kHz                 equals 7.8125 usec
- * 128kHz/256 = 500Hz     equals 2ms
- * x8 overflow after 16ms
+/* 4.8MHz/8 = 600kHz      equals 1.67 usec
+ * 600kHz/256 = 2.3kHz    equals 0.4ms
+ * x8 overflow after 3.4ms
  */
 ISR(TIM0_OVF_vect) {              /* __vector_3 */
 	rxcount = 0;
