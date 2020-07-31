@@ -122,7 +122,7 @@ function tcs_getCRGB()
 	local r = msgs[2][3] + msgs[2][4]*256
 	local g = msgs[2][5] + msgs[2][6]*256
 	local b = msgs[2][7] + msgs[2][8]*256
-	--print('CRGB:',c,r,g,b)
+	print('CRGB:',c,r,g,b)
 	return c, r, g, b
 end
 
