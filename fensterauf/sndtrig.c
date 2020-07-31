@@ -44,8 +44,13 @@ ISR(INT0_vect) {                  /* __vector_1 */
 		return;
 
 	rxbuf[rxcount>>3] = rxbyte;
-	if((rxcount == 40) && (rxbuf[0] == 0x50) && (rxbuf[4] == 0x0d) && (rxbuf[1]+rxbuf[2]+0x50 == rxbuf[3]))
-		co2_msb = rxbuf[1];
+	if((rxcount == 40) && (rxbuf[0] == 0x50) && (rxbyte == 0x0d)) {
+		uint8_t cksum = 0x50;
+		cksum += rxbuf[1];
+		cksum += rxbuf[2];
+		if(cksum == rxbuf[3])
+			co2_msb = rxbuf[1];
+	}
 }
 
 /* 128kHz                 equals 7.8125 usec
