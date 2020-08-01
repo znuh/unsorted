@@ -1,12 +1,5 @@
-
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/sleep.h>
-
-#define MIN(a,b) ((a)<=(b)?(a):(b))
-
-/* 
- * PB4: enable IN
+/* PB4: enable IN
+ * PB3: volume+ OUT - open drain
  * PB2: trigger OUT
  * PB1: CLK IN
  * PB0: DATA IN
@@ -24,6 +17,17 @@
  * 
  * f_clk_io (for T0): /8  /64  /256  /1024
  */
+#define F_CPU  600000UL
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/sleep.h>
+
+#include <util/delay.h>
+
+#define VOLUME_INC  1200
+
+#define MIN(a,b) ((a)<=(b)?(a):(b))
 
 static uint8_t rxbyte = 0;
 static uint8_t rxcount = 0;
@@ -74,6 +78,7 @@ ISR(WDT_vect) {                   /* __vector_8 */
 }
 
 #define TRIGGER_OUT      PB2
+#define VOL_INC_OUT      PB3
 #define nENABLE_IN       PB4
 
 int main(void) {
@@ -124,8 +129,17 @@ int main(void) {
 		if(last_trigger < next_trigger)
 			continue;
 
+		/* if trigger was active during last WDT period
+		 * give it some extra delay for a proper reset */
+		if(last_trigger == 1)
+			_delay_ms(200);
+
 		last_trigger = 0;
 		PORTB |= (1<<TRIGGER_OUT);
+		_delay_ms(500);
+		DDRB |= (1<<VOL_INC_OUT);
+		_delay_ms(VOLUME_INC);
+		DDRB &= ~(1<<VOL_INC_OUT);
 	}
 
 	return 0;

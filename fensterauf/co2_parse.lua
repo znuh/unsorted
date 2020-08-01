@@ -38,7 +38,7 @@ for line in io.lines() do
 			local hex = convert(buf)
 			if hex:find("^50") then
 				local val = tonumber(string.sub(hex,3,6),16)
-				print("CO2:",val,"ppm")
+				print(hex,"CO2:",val,"ppm")
 			end
 			--io.write(hex.." "..bin.." ")
 			buf = ""
