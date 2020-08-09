@@ -29,16 +29,17 @@ for line in io.lines() do
 		if ts - last_ts > 0.04 then
 			buf = ""
 			if ts - last_ts > 1 then 
-				-- print() 
+				 print() 
 			end
 		end
 		buf = buf .. txt
 		if #buf == 40 then
 			local bin = buf
 			local hex = convert(buf)
+			io.write(hex.." ")
 			if hex:find("^50") then
 				local val = tonumber(string.sub(hex,3,6),16)
-				print(hex,"CO2:",val,"ppm")
+				io.write("(CO2: ",val,"ppm) ")
 			end
 			--io.write(hex.." "..bin.." ")
 			buf = ""
@@ -46,3 +47,5 @@ for line in io.lines() do
 		last_ts = ts
 	end
 end
+
+print()
