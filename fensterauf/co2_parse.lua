@@ -7,7 +7,6 @@ function convert(buf)
 	local n_cnt = 0
 	for i=1,#buf do
 		local val = string.byte(buf,i) - 0x30
-		--print(val)
 		nibble = nibble * 2
 		nibble = nibble + val
 		n_cnt = n_cnt + 1
@@ -22,9 +21,7 @@ end
 
 for line in io.lines() do
 	local ts, desc, txt = line:match("(%g+),(.*),'(%d)'")
-	--print(ts,desc,txt)
 	if txt then
-		--print(txt)
 		ts = ts + 0
 		if ts - last_ts > 0.04 then
 			buf = ""
@@ -33,15 +30,19 @@ for line in io.lines() do
 			end
 		end
 		buf = buf .. txt
+		-- also see https://hackaday.io/project/5301/logs
 		if #buf == 40 then
 			local bin = buf
 			local hex = convert(buf)
+			local val = tonumber(string.sub(hex,3,6),16)
 			io.write(hex.." ")
 			if hex:find("^50") then
-				local val = tonumber(string.sub(hex,3,6),16)
 				io.write("(CO2: ",val,"ppm) ")
+			elseif hex:find("^41") then
+				io.write("(RH: ",math.floor(val/100),"%) ")
+			elseif hex:find("^42") then
+				io.write("(T: ",string.format("%.1f",val/16.0-273.15),"°C) ")
 			end
-			--io.write(hex.." "..bin.." ")
 			buf = ""
 		end
 		last_ts = ts
