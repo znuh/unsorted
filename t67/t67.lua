@@ -29,6 +29,24 @@ local T67 = {
 	ABC_LOGIC_EN_DISABLE   = 1006
 }
 
+function t67_write(reg,val)
+	local reg_msb, reg_lsb = math.floor(reg/256), reg%256
+	local val_msb, val_lsb = math.floor(val/256), val%256
+	local msg = {5, reg_msb, reg_lsb, val_msb, val_lsb}
+	local res = i2c:transfer(t67_addr, {msg})
+end
+
+function t76_abc_config(enable)
+	local val = 0
+	if enable and enable+0 > 0 then
+		print("enable autocal")
+		val = 0xff00
+	else
+		print("disable autocal")
+	end
+	t67_write(T67.ABC_LOGIC_EN_DISABLE, val)
+end
+
 function t67_read(reg,n_)
 	local reg_msb, reg_lsb = math.floor(reg/256), reg%256
 	local n = n_ or 1
@@ -48,6 +66,8 @@ function t67_read(reg,n_)
 	end
 	return unpack(ret)
 end
+
+if arg[1] then t76_abc_config(arg[1]) end
 
 local fw, status, co2_ppm = t67_read(T67.FW_REV, 3)
 print(string.format("FW REV : 0x%04x",fw))
