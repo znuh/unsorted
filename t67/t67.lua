@@ -29,7 +29,7 @@ local T67 = {
 	ABC_LOGIC_EN_DISABLE   = 1006
 }
 
-function t67_read(reg,delay,n_)
+function t67_read(reg,n_)
 	local reg_msb, reg_lsb = math.floor(reg/256), reg%256
 	local n = n_ or 1
 	local n_msb, n_lsb = math.floor(n/256), n%256
@@ -38,7 +38,7 @@ function t67_read(reg,delay,n_)
 		msgs[2][i]=0
 	end
 	local res1 = i2c:transfer(t67_addr, {msgs[1]})
-	sleep(delay or 0.01)
+	sleep(0.01)
 	local res = i2c:transfer(t67_addr, {msgs[2]})
 	--dump_table(res)
 	assert(msgs[2][1] == 4)
@@ -49,8 +49,7 @@ function t67_read(reg,delay,n_)
 	return unpack(ret)
 end
 
-local fw, status, co2_ppm = t67_read(T67.FW_REV), t67_read(T67.STATUS), t67_read(T67.GAS_PPM)
-
+local fw, status, co2_ppm = t67_read(T67.FW_REV, 3)
 print(string.format("FW REV : 0x%04x",fw))
 print(string.format("STATUS : 0x%04x",status))
 print(string.format("CO2_PPM: %d",co2_ppm))
