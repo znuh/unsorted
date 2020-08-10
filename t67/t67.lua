@@ -36,7 +36,7 @@ function t67_write(reg,val)
 	local res = i2c:transfer(t67_addr, {msg})
 end
 
-function t76_abc_config(enable)
+function t67_abc_config(enable)
 	local val = 0
 	if enable and enable+0 > 0 then
 		print("enable autocal")
@@ -67,9 +67,21 @@ function t67_read(reg,n_)
 	return unpack(ret)
 end
 
-if arg[1] then t76_abc_config(arg[1]) end
+if arg[1] then
+	t67_abc_config(arg[1])
+else
+	t67_abc_config(0)
+end
+
+sleep(10)
 
 local fw, status, co2_ppm = t67_read(T67.FW_REV, 3)
 print(string.format("FW REV : 0x%04x",fw))
 print(string.format("STATUS : 0x%04x",status))
 print(string.format("CO2_PPM: %d",co2_ppm))
+
+while true do
+	sleep(10)
+	co2_ppm = t67_read(T67.GAS_PPM)
+	print(os.time(),string.format("CO2_PPM: %d",co2_ppm))
+end
