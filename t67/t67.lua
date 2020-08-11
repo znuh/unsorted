@@ -29,10 +29,11 @@ local T67 = {
 	ABC_LOGIC_EN_DISABLE   = 1006
 }
 
-function t67_write(reg,val)
+function t67_write(reg,val,fc)
 	local reg_msb, reg_lsb = math.floor(reg/256), reg%256
 	local val_msb, val_lsb = math.floor(val/256), val%256
 	local msg = {5, reg_msb, reg_lsb, val_msb, val_lsb}
+	if fc then msg[1] = fc end
 	local res = i2c:transfer(t67_addr, {msg})
 end
 
@@ -67,21 +68,41 @@ function t67_read(reg,n_)
 	return unpack(ret)
 end
 
+--t67_write(T67.SLAVE_ADDRESS, t67_addr+1, 6)
+
 if arg[1] then
+	t67_addr = 0x15
+	t67_abc_config(arg[1])
+	t67_addr = 0x16
 	t67_abc_config(arg[1])
 else
+	t67_addr = 0x15
 	t67_abc_config(0)
+	t67_addr = 0x16
+	t67_abc_config(arg[1])
 end
 
 sleep(10)
 
+t67_addr = 0x15
 local fw, status, co2_ppm = t67_read(T67.FW_REV, 3)
+print("T6703@0x15:")
+print(string.format("FW REV : 0x%04x",fw))
+print(string.format("STATUS : 0x%04x",status))
+print(string.format("CO2_PPM: %d",co2_ppm))
+
+t67_addr = 0x16
+fw, status, co2_ppm = t67_read(T67.FW_REV, 3)
+print("T6703@0x16:")
 print(string.format("FW REV : 0x%04x",fw))
 print(string.format("STATUS : 0x%04x",status))
 print(string.format("CO2_PPM: %d",co2_ppm))
 
 while true do
 	sleep(10)
+	t67_addr = 0x15
 	co2_ppm = t67_read(T67.GAS_PPM)
-	print(os.time(),string.format("CO2_PPM: %d",co2_ppm))
+	t67_addr = 0x16
+	co2_ppm_2 = t67_read(T67.GAS_PPM)
+	print(os.time(),"CO2_PPM:",co2_ppm,co2_ppm_2)
 end
