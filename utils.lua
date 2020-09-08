@@ -1,6 +1,10 @@
 
 if socket == nil then socket = require("socket") end
 
+function cond_op(cond,a,b)
+	return cond and a or b
+end
+
 function sleep(n)
 	-- keep the LUA interpreter responsive in case ctrl+c is pressed
 	while n >= 1 do
@@ -14,6 +18,18 @@ end
 
 function gettime()
 	return socket.gettime()
+end
+
+function round_number(x,n)
+	local m = n or 1
+	x = (x + m/2) / m
+	return math.floor(x) * m
+end
+
+function clamp_number(x,n)
+	local m = n or 1
+	x = x / m
+	return math.floor(x) * m
 end
 
 eta = {}
@@ -172,13 +188,22 @@ function unpackint(str)
 	return res
 end
 
-function dump_table(t,prefix)
-	local k,v
-	if prefix == nil then prefix = " " end
-	for k,v in pairs(t) do 
-		if type(v) == "table" then dump_table(v," "..prefix..k..".")
-		else print(prefix..k.."=",v) end
+function table_tostring(tbl,pre)
+	local buf = ""
+	local function tbl_helper(t, prefix)
+		local k,v
+		if prefix == nil then prefix = " " end
+		for k,v in pairs(t) do
+			if type(v) == "table" then tbl_helper(v," "..prefix..k..".")
+			else buf = buf .. prefix..k.."= "..v.."\n" end
+		end
 	end
+	tbl_helper(tbl, pre)
+	return buf
+end
+
+function dump_table(t,prefix)
+	print(table_tostring(t,prefix))
 end
 
 function list_funcs(p1,p2)
