@@ -68,6 +68,7 @@ function fetch_update()
 		-- only add enabled categories
 		if categories[evt.category] then table.insert(res, evt) end
 	end
+	last_ts = string.format("%d",last_ts) -- fix large number formatting
 	return res
 end
 
