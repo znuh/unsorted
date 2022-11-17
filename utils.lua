@@ -1,6 +1,13 @@
 
 if socket == nil then socket = require("socket") end
 
+function table.find(t, s)
+  for _, v in pairs(t) do
+    if v == s then return v end
+  end
+  return nil
+end
+
 function cond_op(cond,a,b)
 	return cond and a or b
 end
@@ -195,7 +202,7 @@ function table_tostring(tbl,pre)
 		if prefix == nil then prefix = " " end
 		for k,v in pairs(t) do
 			if type(v) == "table" then tbl_helper(v," "..prefix..k..".")
-			else buf = buf .. prefix..k.."= "..v.."\n" end
+			else buf = buf .. prefix..k.."= "..tostring(v).."\n" end
 		end
 	end
 	tbl_helper(tbl, pre)
