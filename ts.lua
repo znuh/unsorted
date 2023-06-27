@@ -1,18 +1,30 @@
 #!/usr/bin/lua
 
--- output lines from stdin to stdout with precise timestamps
+-- output lines from stdin to stdout with precise (1us) timestamps
+-- arg[1]:
+--   --rel-start: print timestamps relative to start of script
+--   --rel-first: print timestamps relative to first line
+--   --rel-prev : print timestamps relative to previous line
 
 local sock = require "socket"
 
-local last = nil
+local ref  = nil
+local mode = arg[1]
 
--- cmdline argument -rel --relative etc. -> output relative timestamps
-if string.find(arg[1] or "","rel") then
-	last = sock.gettime()
-end
+if mode == "--rel-start" then ref = sock.gettime() end
 
 for line in io.lines() do
 	local now = sock.gettime()
-	print(string.format("%.6f %s",now - (last or 0), line))
-	if last ~= nil then last = now end
+	line = line:gsub("\r","")
+	if ref == nil then
+		if mode == "--rel-first" or mode == "--rel-prev" then
+			ref = now
+		else
+			ref = 0
+		end
+	end
+	print(string.format("%.6f %s",now - ref, line))
+	if mode == "--rel-prev" then
+		ref = now
+	end
 end
